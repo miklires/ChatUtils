@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "chatutils",
+  "version": "${version}",
+  "name": "Chat Utils",
+  "description": "Chat quality-of-life for Minecraft: mention alerts with per-keyword colours and sounds, chat heads, word filter, timestamps, clickable links with a domain allowlist, long searchable history with export, hidden chat and peek, macros, a chat calculator, ~3900 Unicode symbols with :name suggestions, 16 message fonts, Twitch and YouTube chat in game, translation, chat bubbles, auto-reply, unsigned chat and optional end-to-end encryption. Client-side only.",
+  "authors": [
+    "miklires"
+  ],
+  "contact": {
+    "homepage": "https://github.com/miklires/ChatUtils",
+    "sources": "https://github.com/miklires/ChatUtils",
+    "issues": "https://github.com/miklires/ChatUtils/issues"
+  },
+  "license": "All-Rights-Reserved",
+  "icon": "assets/chatutils/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.miklires.chatutils.client.ChatutilsClient"
+    ],
+    "main": [
+      "dev.miklires.chatutils.Chatutils"
+    ],
+    "modmenu": [
+      "dev.miklires.chatutils.client.ModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "chatutils.mixins.json",
+    {
+      "config": "chatutils.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}",
+    "yet_another_config_lib_v3": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}

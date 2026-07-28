@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.miklires.chatutils.mixin.client",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ChatComponentAccessor",
+    "ChatComponentGraphicsMixin",
+    "ChatComponentMixin",
+    "ChatLineMixin",
+    "ChatScreenMixin",
+    "ClientPacketListenerAccessor",
+    "ClientPacketListenerMixin",
+    "GuiMessageLineMixin",
+    "GuiMessageMixin",
+    "ScreenWidgetsInvoker"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

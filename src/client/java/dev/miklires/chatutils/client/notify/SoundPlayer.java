@@ -1,0 +1,154 @@
+package dev.miklires.chatutils.client.notify;
+
+import dev.miklires.chatutils.Chatutils;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
+import javax.sound.sampled.LineEvent;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Plays notification sounds, either a vanilla sound event or a {@code .wav} the user dropped into
+ * {@code config/chatutils/sounds/}.
+ *
+ * <p>External files go through the Java sound system rather than Minecraft's, because the game's
+ * sound manager only knows about sounds registered by resource packs. The trade-off is that pitch
+ * does not apply to external files — {@link Clip} has no pitch control.
+ */
+public final class SoundPlayer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("chatutils/sound");
+
+    /** File contents are cached; a notification sound should not hit the disk on every message. */
+    private static final Map<String, byte[]> FILE_CACHE = new HashMap<>();
+
+    private static final int MAX_CONCURRENT_CLIPS = 4;
+    private static int activeClips;
+
+    private SoundPlayer() {
+    }
+
+    /** Directory the user drops custom {@code .wav} files into. */
+    public static Path soundsDirectory() {
+        return FabricLoader.getInstance().getConfigDir().resolve(Chatutils.MOD_ID).resolve("sounds");
+    }
+
+    /**
+     * @param id     a vanilla sound id, or the file name of a {@code .wav} in the sounds directory
+     * @param volume 0..1
+     * @param pitch  0.5..2, ignored for external files
+     */
+    public static void play(String id, float volume, float pitch) {
+        if (id == null || id.isBlank() || volume <= 0.0f) {
+            return;
+        }
+
+        if (id.toLowerCase(java.util.Locale.ROOT).endsWith(".wav")) {
+            playFile(id, volume);
+        } else {
+            playVanilla(id, volume, pitch);
+        }
+    }
+
+    private static void playVanilla(String id, float volume, float pitch) {
+        Identifier identifier = Identifier.tryParse(id);
+        if (identifier == null) {
+            return;
+        }
+        BuiltInRegistries.SOUND_EVENT.getOptional(identifier).ifPresent(event ->
+                Minecraft.getInstance().getSoundManager()
+                        .play(SimpleSoundInstance.forUI(event, pitch, volume)));
+    }
+
+    private static void playFile(String fileName, float volume) {
+        byte[] data = load(fileName);
+        if (data == null) {
+            return;
+        }
+        synchronized (SoundPlayer.class) {
+            if (activeClips >= MAX_CONCURRENT_CLIPS) {
+                return;
+            }
+            activeClips++;
+        }
+
+        Thread thread = new Thread(() -> {
+            try (AudioInputStream stream = AudioSystem.getAudioInputStream(new ByteArrayInputStream(data))) {
+                Clip clip = AudioSystem.getClip();
+                clip.addLineListener(event -> {
+                    if (event.getType() == LineEvent.Type.STOP) {
+                        clip.close();
+                        synchronized (SoundPlayer.class) {
+                            activeClips--;
+                        }
+                    }
+                });
+                clip.open(stream);
+                applyVolume(clip, volume);
+                clip.start();
+            } catch (Exception failure) {
+                synchronized (SoundPlayer.class) {
+                    activeClips--;
+                }
+                LOGGER.warn("Could not play custom sound {}: {}", fileName, failure.toString());
+            }
+        }, "chatutils-sound");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private static void applyVolume(Clip clip, float volume) {
+        if (!clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+            return;
+        }
+        FloatControl control = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+        float clamped = Math.max(0.0001f, Math.min(1.0f, volume));
+        float gain = (float) (20.0 * Math.log10(clamped));
+        control.setValue(Math.max(control.getMinimum(), Math.min(control.getMaximum(), gain)));
+    }
+
+    private static byte[] load(String fileName) {
+        if (FILE_CACHE.containsKey(fileName)) {
+            return FILE_CACHE.get(fileName);
+        }
+
+        Path path = soundsDirectory().resolve(fileName).normalize();
+        // Keep the lookup inside the sounds directory: the file name comes from a config string.
+        if (!path.startsWith(soundsDirectory())) {
+            FILE_CACHE.put(fileName, null);
+            return null;
+        }
+
+        byte[] data = null;
+        try {
+            if (Files.isRegularFile(path)) {
+                data = Files.readAllBytes(path);
+            } else {
+                LOGGER.warn("Custom sound {} not found in {}", fileName, soundsDirectory());
+            }
+        } catch (IOException failure) {
+            LOGGER.warn("Could not read custom sound {}: {}", fileName, failure.toString());
+        }
+        FILE_CACHE.put(fileName, data);
+        return data;
+    }
+
+    /** Forgets cached file contents so edited sounds are picked up without a restart. */
+    public static void clearCache() {
+        FILE_CACHE.clear();
+    }
+}
