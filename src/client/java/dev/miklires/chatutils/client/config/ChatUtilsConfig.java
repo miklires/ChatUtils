@@ -8,6 +8,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -28,6 +29,65 @@ public class ChatUtilsConfig {
 
     public static ChatUtilsConfig get() {
         return HANDLER.instance();
+    }
+
+    public void normalize() {
+        mentionKeywords = cleanList(mentionKeywords, 256, 256);
+        mentionExclusions = cleanList(mentionExclusions, 256, 256);
+        filteredWords = cleanList(filteredWords, 512, 256);
+        blacklistedPlayers = cleanList(blacklistedPlayers, 512, 64);
+        friends = cleanList(friends, 512, 64);
+        linkAllowedDomains = cleanList(linkAllowedDomains, 256, 253);
+        hiddenNames = cleanList(hiddenNames, 512, 64);
+        commandKeys = cleanList(commandKeys, 128, 512);
+        autoReplyRules = cleanList(autoReplyRules, 256, 1024);
+        customMacros = cleanList(customMacros, 256, 1024);
+
+        mentionSoundId = fallback(mentionSoundId, "minecraft:entity.experience_orb.pickup", 256);
+        messageSoundId = fallback(messageSoundId, "minecraft:ui.button.click", 256);
+        mentionHotbarFormat = fallback(mentionHotbarFormat, "%s mentioned you", 256);
+        filterCensorChar = fallback(filterCensorChar, "*", 8);
+        timestampFormat = fallback(timestampFormat, "HH:mm", 64);
+        hideOwnNameChar = fallback(hideOwnNameChar, "*", 8);
+        calculatorPrefix = fallback(calculatorPrefix, "=", 16);
+        translateEndpoint = trim(translateEndpoint, 2048);
+        translateApiKey = trim(translateApiKey, 4096);
+        twitchChannel = trim(twitchChannel, 64);
+        youtubeVideoId = trim(youtubeVideoId, 128);
+        youtubeApiKey = trim(youtubeApiKey, 4096);
+        encryptionPassphrase = trim(encryptionPassphrase, 1024);
+
+        mentionCooldownMs = clamp(mentionCooldownMs, 0, 10_000);
+        chatAnimationDurationMs = clamp(chatAnimationDurationMs, 50, 800);
+        chatHudOffset = clamp(chatHudOffset, 0, 60);
+        chatBubbleMs = clamp(chatBubbleMs, 1_000, 20_000);
+        chatBubbleLines = clamp(chatBubbleLines, 1, 6);
+        chatBubbleLength = clamp(chatBubbleLength, 16, 96);
+        compactSpamWindowMs = clamp(compactSpamWindowMs, 50, 1_000);
+        antiClearThreshold = clamp(antiClearThreshold, 2, 30);
+        historySize = clamp(historySize, 100, 10_000);
+        hideChatRevealMs = clamp(hideChatRevealMs, 500, 15_000);
+        autoReplyCooldownMs = clamp(autoReplyCooldownMs, 3_000, 120_000);
+        streamMaxPerTick = clamp(streamMaxPerTick, 1, 20);
+
+        mentionSoundVolume = clamp(mentionSoundVolume, 0.0f, 1.0f);
+        mentionSoundPitch = clamp(mentionSoundPitch, 0.5f, 2.0f);
+        messageSoundVolume = clamp(messageSoundVolume, 0.0f, 1.0f);
+        messageSoundPitch = clamp(messageSoundPitch, 0.5f, 2.0f);
+        chatDelaySeconds = clamp(chatDelaySeconds, 0.0, 6.0);
+        chatScale = clamp(chatScale, 0.0, 1.0);
+        chatWidth = clamp(chatWidth, 0.0, 1.0);
+        chatHeightFocused = clamp(chatHeightFocused, 0.0, 1.0);
+        chatHeightUnfocused = clamp(chatHeightUnfocused, 0.0, 1.0);
+        chatOpacity = clamp(chatOpacity, 0.0, 1.0);
+        chatTextBackgroundOpacity = clamp(chatTextBackgroundOpacity, 0.0, 1.0);
+        chatLineSpacing = clamp(chatLineSpacing, 0.0, 1.0);
+
+        filterMode = filterMode == null ? FilterMode.CENSOR : filterMode;
+        timestampMode = timestampMode == null ? TimestampMode.OFF : timestampMode;
+        chatFont = chatFont == null ? ChatFont.NONE : chatFont;
+        translateSource = translateSource == null ? TranslateLanguage.AUTO : translateSource;
+        translateTarget = translateTarget == null ? TranslateLanguage.AUTO : translateTarget;
     }
 
     // ------------------------------------------------------------------ mentions
@@ -579,6 +639,49 @@ public class ChatUtilsConfig {
     // ------------------------------------------------------------------ helpers
 
     public static void save() {
+        get().normalize();
         HANDLER.save();
+    }
+
+    private static List<String> cleanList(List<String> values, int maxEntries, int maxLength) {
+        if (values == null || values.isEmpty()) {
+            return new ArrayList<>();
+        }
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for (String value : values) {
+            String cleaned = trim(value, maxLength);
+            if (!cleaned.isEmpty()) {
+                unique.add(cleaned);
+            }
+            if (unique.size() == maxEntries) {
+                break;
+            }
+        }
+        return new ArrayList<>(unique);
+    }
+
+    private static String fallback(String value, String defaultValue, int maxLength) {
+        String cleaned = trim(value, maxLength);
+        return cleaned.isEmpty() ? defaultValue : cleaned;
+    }
+
+    private static String trim(String value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        String cleaned = value.strip();
+        return cleaned.length() <= maxLength ? cleaned : cleaned.substring(0, maxLength);
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Float.isFinite(value) ? Math.max(min, Math.min(max, value)) : min;
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Double.isFinite(value) ? Math.max(min, Math.min(max, value)) : min;
     }
 }

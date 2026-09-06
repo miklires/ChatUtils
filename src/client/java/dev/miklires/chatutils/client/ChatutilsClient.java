@@ -43,6 +43,7 @@ public class ChatutilsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ChatUtilsConfig.HANDLER.load();
+        ChatUtilsConfig.get().normalize();
         createSoundsDirectory();
 
         ChatUtilsKeys.register();
