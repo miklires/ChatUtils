@@ -7,12 +7,6 @@ import dev.miklires.chatutils.client.config.ChatUtilsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-/**
- * Fires the non-visual half of a mention: the sound and the text above the hotbar.
- *
- * <p>The highlight itself is applied by the processor; this only runs for messages that survived
- * the whole pipeline, so a mention inside a filtered or blacklisted line stays silent.
- */
 public final class MentionNotifier {
 
     private static long lastNotifiedAt;
@@ -20,7 +14,6 @@ public final class MentionNotifier {
     private MentionNotifier() {
     }
 
-    /** @param rule the keyword that fired, whose sound wins over the default when it names one */
     public static void notifyMention(ChatAuthor author, @Nullable MentionRule rule) {
         ChatUtilsConfig config = ChatUtilsConfig.get();
 
@@ -51,7 +44,6 @@ public final class MentionNotifier {
         try {
             return String.format(format, name);
         } catch (java.util.IllegalFormatException badFormat) {
-            // The format string is user-supplied; fall back rather than spamming exceptions.
             return name + " mentioned you";
         }
     }

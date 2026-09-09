@@ -9,21 +9,10 @@ import net.minecraft.network.chat.MutableComponent;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * A line naming the world or server you just joined.
- *
- * <p>Only useful because the backlog survives leaving a world: without a divider, yesterday's
- * conversation on one server and today's on another run together as one wall of text with nothing
- * marking the seam.
- *
- * <p>Deliberately not drawn on the first join of a session — there is nothing above it to separate
- * it from.
- */
 public final class SessionDivider {
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
-    /** Padding either side of the label, wide enough to read as a rule rather than as a message. */
     private static final String RULE = "─────";
 
     private SessionDivider() {
@@ -42,7 +31,6 @@ public final class SessionDivider {
         ChatDelivery.sendSystem(label.withStyle(style -> style.withColor(config.sessionDividerColor)));
     }
 
-    /** The server's name or address; singleplayer has no address to show. */
     private static Component destination() {
         ServerData server = Minecraft.getInstance().getCurrentServer();
         if (server == null) {

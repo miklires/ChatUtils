@@ -3,33 +3,11 @@ package dev.miklires.chatutils.client.screen;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The characters offered by the symbol picker, grouped into tabs.
- *
- * <p>Built from Unicode blocks rather than a hand-written list: typing out a few dozen favourites by
- * hand caps the picker at whatever someone bothered to enumerate, while the blocks give thousands
- * and stay correct as Unicode grows. Anything unassigned, invisible or combining is filtered out —
- * a combining mark on its own renders as a stray accent and is never what the player wanted.
- *
- * <p>Minecraft ships Unifont, which covers these blocks in monochrome, so emoji code points do draw
- * — just without colour. A character missing from the font shows as a hollow box; the search box is
- * usually a faster way past those than scrolling.
- *
- * <p>Names come from {@link Character#getName}, so the search box works without shipping a name
- * table. Resolving a few thousand of them costs a moment, so the whole library is built once, on
- * first use.
- */
 public final class SymbolLibrary {
 
-    /** One character, with the Unicode name the search box matches against. */
     public record Symbol(String text, String name) {
     }
 
-    /**
-     * A tab in the picker.
-     *
-     * @param wide entries too long for a 14px cell, laid out as full-width rows instead of a grid
-     */
     public record Category(String translationKey, String tabLabel, List<Symbol> symbols, boolean wide) {
     }
 
@@ -38,7 +16,6 @@ public final class SymbolLibrary {
     private SymbolLibrary() {
     }
 
-    /** Built on first call; afterwards this is a plain field read. */
     public static synchronized List<Category> categories() {
         if (categories == null) {
             categories = build();
@@ -74,12 +51,6 @@ public final class SymbolLibrary {
         return built;
     }
 
-    /**
-     * Faces built out of punctuation. Not generated from a block like the rest — a kaomoji is a
-     * little composition, not a code point, so this is the one list that has to be written out.
-     *
-     * <p>Flagged wide: {@code ¯\_(ツ)_/¯} in a 14px cell would be a smear.
-     */
     private static Category kaomoji() {
         String[] faces = {
                 "¯\\_(ツ)_/¯", "(╯°□°)╯︵ ┻━┻", "┬─┬ ノ( ゜-゜ノ)", "(ノಠ益ಠ)ノ彡┻━┻",
@@ -92,13 +63,11 @@ public final class SymbolLibrary {
 
         List<Symbol> symbols = new ArrayList<>(faces.length);
         for (String face : faces) {
-            // The face is its own search term: there is no Unicode name for a composition.
             symbols.add(new Symbol(face, face));
         }
         return new Category("chatutils.symbols.kaomoji", "^-^", List.copyOf(symbols), true);
     }
 
-    /** @param ranges inclusive {@code from, to} code point pairs */
     private static Category category(String key, String tabLabel, int... ranges) {
         List<Symbol> symbols = new ArrayList<>();
         for (int i = 0; i + 1 < ranges.length; i += 2) {
@@ -111,7 +80,6 @@ public final class SymbolLibrary {
         return new Category("chatutils.symbols." + key, tabLabel, List.copyOf(symbols), false);
     }
 
-    /** Excludes anything that would not show up as a standalone glyph the player can click. */
     private static boolean isUsable(int codePoint) {
         if (!Character.isDefined(codePoint)) {
             return false;

@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Builds the YACL settings screen shown from Mod Menu. */
 public final class ConfigScreen {
 
     private ConfigScreen() {
@@ -48,16 +47,12 @@ public final class ConfigScreen {
                 .category(privacy(config))
                 .save(() -> {
                     ChatUtilsConfig.save();
-                    // Sound files may have been swapped out and the window settings changed while
-                    // the screen was open; both need to take effect without a restart.
                     SoundPlayer.clearCache();
                     ChatWindowOptions.apply();
                 })
                 .build()
                 .generateScreen(parent);
     }
-
-    // ------------------------------------------------------------------ categories
 
     private static ConfigCategory mentions(ChatUtilsConfig config) {
         return ConfigCategory.createBuilder()
@@ -429,7 +424,6 @@ public final class ConfigScreen {
                 .build();
     }
 
-    /** Built-in placeholder names, shown in the macro description so they are discoverable. */
     private static List<String> macroList() {
         List<String> names = new ArrayList<>();
         for (String name : MacroExpander.builtInNames()) {
@@ -437,8 +431,6 @@ public final class ConfigScreen {
         }
         return names;
     }
-
-    // ------------------------------------------------------------------ option helpers
 
     private static Option<Boolean> bool(String key, boolean def, Supplier<Boolean> getter, Consumer<Boolean> setter) {
         return Option.<Boolean>createBuilder()
@@ -473,8 +465,6 @@ public final class ConfigScreen {
                 .build();
     }
 
-    /** Vanilla chat options are all 0..1 fractions, so every slider here shares that range. */
-    /** Ranged variant, for the values vanilla does not express as a 0..1 fraction. */
     private static Option<Double> doubleSlider(String key, double def, double min, double max,
                                                double step, Supplier<Double> getter,
                                                Consumer<Double> setter) {
@@ -510,7 +500,6 @@ public final class ConfigScreen {
                 .build();
     }
 
-    /** A plain string field, but described so the user knows a {@code .wav} file name works too. */
     private static Option<String> soundIdOption(String key, String def,
                                                 Supplier<String> getter, Consumer<String> setter) {
         return Option.<String>createBuilder()
@@ -533,10 +522,6 @@ public final class ConfigScreen {
                 .build();
     }
 
-    /**
-     * Colours live in the config as {@code 0xRRGGBB} ints so the JSON stays hand-editable; YACL's
-     * picker works in {@link Color}, so translate at the boundary and drop the alpha channel.
-     */
     private static Option<Color> color(String key, int def,
                                        Supplier<Integer> getter, Consumer<Integer> setter) {
         return Option.<Color>createBuilder()

@@ -13,17 +13,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-/**
- * Suggests symbols as you type, the way every other chat app does: {@code :cro} offers a croissant,
- * a crown, a crocodile.
- *
- * <p>Faster than the picker for anything you can name, and it teaches the names — the picker is a
- * grid of thousands of glyphs, and finding the same one twice means remembering which tab it was on.
- *
- * <p>Driven from the client tick rather than from the text box's responder. Vanilla already owns
- * that responder for its own command suggestions, and taking it would break command completion for
- * a feature that does not need to react any faster than a tick.
- */
 public final class SymbolSuggestions {
 
     private static final int CELL = SymbolPalette.CELL;
@@ -33,10 +22,8 @@ public final class SymbolSuggestions {
     private static final int SLOTS = 8;
     private static final int WIDTH = 22;
 
-    /** Below this the query matches half of Unicode and the list is noise. */
     private static final int MIN_QUERY = 2;
 
-    /** The chat screen currently showing, so the tick handler can find it. */
     @Nullable
     private static SymbolSuggestions active;
 
@@ -45,7 +32,6 @@ public final class SymbolSuggestions {
     private EditBox input;
     private List<SymbolLibrary.Symbol> view = List.of();
 
-    /** Start of the {@code :query} being completed, or -1 when there is none. */
     private int tokenStart = -1;
 
     private String lastValue = "";
@@ -71,13 +57,6 @@ public final class SymbolSuggestions {
         refresh();
     }
 
-    /**
-     * Called every client tick.
-     *
-     * <p>Also notices when the chat screen has gone, rather than being told: a screen closing is
-     * only reliably observable from the outside, and polling one tick longer than needed costs a
-     * null check.
-     */
     public static void tick() {
         SymbolSuggestions current = active;
         if (current == null) {
@@ -119,12 +98,6 @@ public final class SymbolSuggestions {
         }
     }
 
-    /**
-     * Symbols whose Unicode name contains the word after the last {@code :}.
-     *
-     * <p>The colon has to start a word, so a time or an emoticon is not read as the start of a
-     * query, and the text after it has to be plain letters — a space ends it.
-     */
     private List<SymbolLibrary.Symbol> matches(String value) {
         tokenStart = -1;
 
@@ -160,7 +133,6 @@ public final class SymbolSuggestions {
         return found;
     }
 
-    /** Swaps the {@code :query} for the chosen symbol, leaving the rest of the line alone. */
     private void insert(int index) {
         if (index >= view.size() || tokenStart < 0 || input == null) {
             return;

@@ -9,23 +9,10 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Reads a Twitch channel's chat over Twitch's IRC-over-WebSocket gateway.
- *
- * <p>Anonymously: Twitch lets any client read a public channel by logging in as {@code justinfan}
- * plus digits, with no password and no OAuth app. That is the whole reason this works out of the
- * box — there is no token to obtain, nothing to paste into the config, and no credential of the
- * player's for the mod to hold. The flip side is that it is strictly read-only, which is the right
- * amount of power for a Minecraft chat mod to have over someone's stream.
- *
- * <p>{@code twitch.tv/tags} is requested only for the display name and the chatter's colour; the
- * badge and emote metadata that comes with it is ignored.
- */
 public final class TwitchSource extends StreamSource {
 
     private static final URI GATEWAY = URI.create("wss://irc-ws.chat.twitch.tv:443");
 
-    /** Twitch drops a silent connection; it pings first, and expects the pong within five minutes. */
     private static final Duration IDLE_TIMEOUT = Duration.ofMinutes(6);
     private static final int MAX_PARTIAL_CHARS = 65_536;
 
@@ -37,16 +24,10 @@ public final class TwitchSource extends StreamSource {
     private volatile long lastActivity;
 
     public TwitchSource(String channel) {
-        // Normalised before it becomes the target, so "Channel", "channel" and "#channel" are one
-        // target and not three — otherwise editing the config's casing would force a reconnect.
         super(normalise(channel));
         this.channel = normalise(channel);
     }
 
-    /**
-     * Public because the reconciler compares a running source's target against the config to decide
-     * whether to reconnect. It has to compare like for like, and the rule lives here.
-     */
     public static String normalise(String channel) {
         if (channel == null) {
             return "";
@@ -76,12 +57,10 @@ public final class TwitchSource extends StreamSource {
 
         lastActivity = System.currentTimeMillis();
 
-        // Anonymous login. The digits only have to be unique-ish; Twitch does not check them.
         send("CAP REQ :twitch.tv/tags");
         send("NICK justinfan" + (10000 + (int) (Math.random() * 89999)));
         send("JOIN #" + channel);
 
-        // Park until the connection ends or the game asks to stop. The listener does the work.
         while (shouldRun() && finished.getCount() > 0) {
             if (finished.await(1, TimeUnit.SECONDS)) {
                 break;
@@ -98,8 +77,6 @@ public final class TwitchSource extends StreamSource {
         WebSocket open = socket;
         socket = null;
         if (open != null) {
-            // Abort rather than a polite close: this is called from the game thread and must return
-            // at once, and there is nothing to flush on a read-only connection.
             open.abort();
         }
     }
@@ -111,13 +88,6 @@ public final class TwitchSource extends StreamSource {
         }
     }
 
-    /**
-     * Handles one IRC line.
-     *
-     * <p>Only {@code PING} and {@code PRIVMSG} matter. Everything else — the welcome banner, joins,
-     * parts, the capability acknowledgement — is traffic that proves the connection is alive, which
-     * is all it is used for.
-     */
     private void handle(String line) {
         lastActivity = System.currentTimeMillis();
 
@@ -137,7 +107,6 @@ public final class TwitchSource extends StreamSource {
             rest = rest.substring(space + 1);
         }
 
-        // :nick!nick@nick.tmi.twitch.tv PRIVMSG #channel :the message
         if (!rest.startsWith(":")) {
             return;
         }
@@ -169,7 +138,6 @@ public final class TwitchSource extends StreamSource {
         deliver(new StreamMessage(StreamMessage.Platform.TWITCH, author, text, parseColor(tagValue(tags, "color"))));
     }
 
-    /** IRCv3 tags are {@code key=value;key=value}, with escapes for the few characters that clash. */
     private static String tagValue(String tags, String key) {
         for (String tag : tags.split(";")) {
             int equals = tag.indexOf('=');
@@ -204,22 +172,17 @@ public final class TwitchSource extends StreamSource {
         return result.toString();
     }
 
-    /** @return {@code 0xRRGGBB}, or 0 when the chatter never picked a colour */
     private static int parseColor(String value) {
         if (value == null || !value.startsWith("#") || value.length() != 7) {
             return 0;
         }
         try {
             return Integer.parseInt(value.substring(1), 16);
-        } catch (NumberFormatException malformed) {
+        } catch (NumberFormatException e) {
             return 0;
         }
     }
 
-    /**
-     * A WebSocket frame is not an IRC line: frames arrive split at arbitrary points and several
-     * lines can share one frame, so text is buffered and cut on newlines.
-     */
     private final class Listener implements WebSocket.Listener {
 
         @Override

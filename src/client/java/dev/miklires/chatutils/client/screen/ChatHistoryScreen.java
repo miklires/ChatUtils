@@ -16,14 +16,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * A searchable log of everything that reached the chat, with click-to-copy.
- *
- * <p>Searching the chat widget itself would mean filtering lines that vanilla has already wrapped,
- * styled and stripped of their sender — and mapping a click back onto one of them means undoing the
- * chat's own transform. A screen of the mod's own rows sidesteps both: the entries are whole
- * messages, and a row is a widget that knows perfectly well when it was clicked.
- */
 public class ChatHistoryScreen extends Screen {
 
     private static final int ROW_HEIGHT = 12;
@@ -39,7 +31,6 @@ public class ChatHistoryScreen extends Screen {
 
     private final java.util.List<FlatButton> rows = new java.util.ArrayList<>();
 
-    /** Where to go back to on Esc; null returns to the game, which is right for the hotkey. */
     private final Screen parent;
 
     private EditBox search;
@@ -48,7 +39,6 @@ public class ChatHistoryScreen extends Screen {
     private int page;
     private int rowCount;
 
-    /** Query to start with, so a command can open the screen already filtered. */
     private final String initialQuery;
 
     public ChatHistoryScreen() {
@@ -105,8 +95,6 @@ public class ChatHistoryScreen extends Screen {
         export.setTooltip(Tooltip.create(Component.translatable("chatutils.history.save_hint")));
         addRenderableWidget(export);
 
-        // F3+D clears the chat widget but never reaches this log — that is the whole point of it —
-        // so emptying it has to be possible from the screen that shows it.
         FlatButton clear = new FlatButton(
                 this.width - MARGIN - arrow - GAP - button - GAP - button, footerY,
                 button, ROW_HEIGHT, Component.translatable("chatutils.history.clear"), this::clearAll);
@@ -122,7 +110,6 @@ public class ChatHistoryScreen extends Screen {
         refresh();
     }
 
-    /** Copies the clicked row's message, so it can be pasted somewhere that is not Minecraft. */
     private void copy(int index) {
         if (index >= view.size()) {
             return;
@@ -131,10 +118,6 @@ public class ChatHistoryScreen extends Screen {
         pageLabel.setMessage(Component.translatable("chatutils.history.copied"));
     }
 
-    /**
-     * Writes everything the current query matches, not just the visible page — otherwise the search
-     * box would be useless for pulling out a conversation.
-     */
     private void export() {
         List<ChatHistory.Entry> matches = ChatHistory.search(search.getValue());
         if (matches.isEmpty()) {
@@ -145,16 +128,12 @@ public class ChatHistoryScreen extends Screen {
             Path file = ChatHistory.export(matches);
             pageLabel.setMessage(Component.translatable("chatutils.history.saved",
                     file.getFileName().toString()));
-        } catch (IOException failure) {
-            LOGGER.warn("Could not export the chat log: {}", failure.toString());
+        } catch (IOException e) {
+            LOGGER.warn("Could not export the chat log: {}", e.toString());
             pageLabel.setMessage(Component.translatable("chatutils.history.save_failed"));
         }
     }
 
-    /**
-     * Empties the log. Deliberately one click with no confirmation dialog: the log is a convenience,
-     * not a document, and it refills the moment anyone speaks.
-     */
     private void clearAll() {
         int cleared = ChatHistory.size();
         ChatHistory.clear();
@@ -197,7 +176,6 @@ public class ChatHistoryScreen extends Screen {
                 : Component.literal((page + 1) + " / " + pages + "   (" + matches.size() + ")"));
     }
 
-    /** Prefixes the arrival time and trims to what the row can actually show. */
     private String label(ChatHistory.Entry entry, int width) {
         String text = "[" + TIME.format(Instant.ofEpochMilli(entry.time())) + "] " + entry.plain();
         int available = width - 8;
@@ -214,10 +192,6 @@ public class ChatHistoryScreen extends Screen {
         return text.substring(0, end) + ellipsis;
     }
 
-    /**
-     * Opened from the chat, closing goes back to the chat — the search is a detour, not a
-     * destination, and it should not cost the half-typed message that was in the input.
-     */
     @Override
     public void onClose() {
         if (parent == null) {

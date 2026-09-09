@@ -18,26 +18,11 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * The mod's own record of everything that reached the chat.
- *
- * <p>Kept separately from the chat widget because the widget stores lines, not messages: text is
- * already wrapped, styled and stripped of any notion of who sent it. Searching and copying want the
- * message as it was — one entry, whole, with its author.
- *
- * <p>Messages the pipeline dropped never get here. A blocked player's messages staying searchable
- * would rather defeat the point of blocking them.
- */
 public final class ChatHistory {
 
-    /**
-     * @param plain  the message with formatting stripped, for matching and for the clipboard
-     * @param author who sent it, when that could be worked out
-     */
     public record Entry(long time, Component component, String plain, @Nullable String author) {
     }
 
-    /** Safe in a file name on every platform, and sorts chronologically in a directory listing. */
     private static final DateTimeFormatter FILE_STAMP =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss").withZone(ZoneId.systemDefault());
 
@@ -58,12 +43,6 @@ public final class ChatHistory {
         }
     }
 
-    /**
-     * Entries matching {@code query}, newest first.
-     *
-     * <p>Matches the author as well as the text, so "Steve" finds what Steve said and not only the
-     * messages that happen to mention him.
-     */
     public static List<Entry> search(String query) {
         String needle = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         List<Entry> matches = new ArrayList<>();
@@ -80,12 +59,6 @@ public final class ChatHistory {
         return matches;
     }
 
-    /**
-     * Writes {@code selection} to a timestamped text file and returns its path.
-     *
-     * <p>Goes to {@code chat-logs/} beside the game's own {@code screenshots/} rather than into the
-     * config directory: this is something the player made and will want to find, not a setting.
-     */
     public static Path export(List<Entry> selection) throws IOException {
         Path directory = FabricLoader.getInstance().getGameDir().resolve("chat-logs");
         Files.createDirectories(directory);
@@ -104,10 +77,6 @@ public final class ChatHistory {
         return entries.size();
     }
 
-    /**
-     * Empties the log. Vanilla's F3+D clears the chat widget but never reaches here — the whole
-     * point of this log is that it outlives the widget — so this is the only way to drop it.
-     */
     public static void clear() {
         entries.clear();
     }

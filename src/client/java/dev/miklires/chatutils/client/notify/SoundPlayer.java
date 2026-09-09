@@ -24,19 +24,10 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Plays notification sounds, either a vanilla sound event or a {@code .wav} the user dropped into
- * {@code config/chatutils/sounds/}.
- *
- * <p>External files go through the Java sound system rather than Minecraft's, because the game's
- * sound manager only knows about sounds registered by resource packs. The trade-off is that pitch
- * does not apply to external files — {@link Clip} has no pitch control.
- */
 public final class SoundPlayer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("chatutils/sound");
 
-    /** File contents are cached; a notification sound should not hit the disk on every message. */
     private static final Map<String, byte[]> FILE_CACHE = new HashMap<>();
 
     private static final int MAX_CONCURRENT_CLIPS = 4;
@@ -46,16 +37,10 @@ public final class SoundPlayer {
     private SoundPlayer() {
     }
 
-    /** Directory the user drops custom {@code .wav} files into. */
     public static Path soundsDirectory() {
         return FabricLoader.getInstance().getConfigDir().resolve(Chatutils.MOD_ID).resolve("sounds");
     }
 
-    /**
-     * @param id     a vanilla sound id, or the file name of a {@code .wav} in the sounds directory
-     * @param volume 0..1
-     * @param pitch  0.5..2, ignored for external files
-     */
     public static void play(String id, float volume, float pitch) {
         if (id == null || id.isBlank() || volume <= 0.0f) {
             return;
@@ -104,11 +89,11 @@ public final class SoundPlayer {
                 clip.open(stream);
                 applyVolume(clip, volume);
                 clip.start();
-            } catch (Exception failure) {
+            } catch (Exception e) {
                 synchronized (SoundPlayer.class) {
                     activeClips--;
                 }
-                LOGGER.warn("Could not play custom sound {}: {}", fileName, failure.toString());
+                LOGGER.warn("Could not play custom sound {}: {}", fileName, e.toString());
             }
         }, "chatutils-sound");
         thread.setDaemon(true);
@@ -142,7 +127,6 @@ public final class SoundPlayer {
             return null;
         }
         Path path = soundsDirectory().resolve(supplied).normalize();
-        // Keep the lookup inside the sounds directory: the file name comes from a config string.
         if (!path.startsWith(soundsDirectory())) {
             FILE_CACHE.put(fileName, null);
             return null;
@@ -162,14 +146,13 @@ public final class SoundPlayer {
                 LOGGER.warn("Custom sound {} is missing, linked, or larger than {} MiB",
                         fileName, MAX_WAV_BYTES / 1024 / 1024);
             }
-        } catch (IOException failure) {
-            LOGGER.warn("Could not read custom sound {}: {}", fileName, failure.toString());
+        } catch (IOException e) {
+            LOGGER.warn("Could not read custom sound {}: {}", fileName, e.toString());
         }
         FILE_CACHE.put(fileName, data);
         return data;
     }
 
-    /** Forgets cached file contents so edited sounds are picked up without a restart. */
     public static void clearCache() {
         FILE_CACHE.clear();
     }

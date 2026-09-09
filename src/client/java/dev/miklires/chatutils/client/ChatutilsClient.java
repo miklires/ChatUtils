@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 
-/** Wires the mod's pieces to the client's events. */
 public class ChatutilsClient implements ClientModInitializer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("chatutils");
@@ -56,15 +55,6 @@ public class ChatutilsClient implements ClientModInitializer {
         registerLifecycle();
     }
 
-    /**
-     * Incoming messages go through Fabric's receive events rather than a chat mixin: they fire at
-     * packet level, hand us the verified sender, and survive game updates far better.
-     *
-     * <p>Player chat has no modify hook — rewriting a signed message would contradict its signature
-     * — so {@code MessagePipeline} re-posts the lines it changed itself. System messages have both
-     * hooks and are swapped in place. Overlay messages are the text above the hotbar, not chat, so
-     * they are left alone.
-     */
     private void registerIncomingChat() {
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signed, sender, params, timestamp) ->
                 MessagePipeline.allowPlayerChat(message, sender));
@@ -76,23 +66,12 @@ public class ChatutilsClient implements ClientModInitializer {
     }
 
     private void registerOutgoingChat() {
-        // Before anything else: a message that is a sum is an answer to yourself, not something to
-        // broadcast, so it is intercepted rather than expanded and sent.
         ClientSendMessageEvents.ALLOW_CHAT.register(message -> !ChatCalculator.handleOutgoing(message));
-        // Length is checked against what will actually be sent, not what was typed: a placeholder
-        // can expand well past the packet limit, and an encrypted message clipped by that limit
-        // fails to decrypt entirely rather than arriving short.
         ClientSendMessageEvents.ALLOW_CHAT.register(
                 message -> EncryptedChat.allowOutgoing(finalPlaintext(message)));
 
-        // Macros expand first so that what a placeholder turned into is written in the same alphabet
-        // as the rest of the line; encryption comes last, since everything after it would be working
-        // on ciphertext. Commands get the macros but neither the font nor the encryption — the
-        // server has to be able to read a command.
         ClientSendMessageEvents.MODIFY_CHAT.register(
                 message -> EncryptedChat.encryptOutgoing(finalPlaintext(message)));
-        // Recorded here rather than through a separate send event: this listener already sees the
-        // final text of every command, which is exactly what the repeat key has to replay.
         ClientSendMessageEvents.MODIFY_COMMAND.register(command -> {
             String expanded = MacroExpander.expand(command);
             CommandKeys.rememberCommand(expanded);
@@ -101,7 +80,6 @@ public class ChatutilsClient implements ClientModInitializer {
         ClientSendMessageEvents.CHAT.register(message -> NoReports.onMessageSent());
     }
 
-    /** Everything the mod does to a message before it is sealed. */
     private static String finalPlaintext(String message) {
         return ChatUtilsConfig.get().chatFont.apply(MacroExpander.expand(message));
     }
@@ -109,7 +87,6 @@ public class ChatutilsClient implements ClientModInitializer {
     private void registerLifecycle() {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             ChatWindowOptions.apply();
-            // Before anything the mod might say about this session, so the divider stays a heading.
             SessionDivider.onJoin();
             NoReports.onJoin();
         });
@@ -122,7 +99,6 @@ public class ChatutilsClient implements ClientModInitializer {
             CommandKeys.reset();
             ChatHeads.reset();
             ChatVisibility.reset();
-            // Leaving a world should not leave a socket open to someone's stream.
             StreamChat.stopAll();
             ChatBubbles.clear();
         });
@@ -138,12 +114,11 @@ public class ChatutilsClient implements ClientModInitializer {
         });
     }
 
-    /** Makes the drop-in folder for custom sounds exist, so the user has somewhere obvious to look. */
     private void createSoundsDirectory() {
         try {
             Files.createDirectories(SoundPlayer.soundsDirectory());
-        } catch (IOException failure) {
-            LOGGER.warn("Could not create the custom sounds directory: {}", failure.toString());
+        } catch (IOException e) {
+            LOGGER.warn("Could not create the custom sounds directory: {}", e.toString());
         }
     }
 }

@@ -19,18 +19,10 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Expands {@code [placeholder]} shorthands in outgoing messages — type {@code my xyz: [xyz]} and it
- * goes out as {@code my xyz: 128, 64, -310}.
- *
- * <p>Deliberately no {@code [tps]}: the client never learns the server's real tick rate, so any
- * number shown would be a guess dressed up as a fact.
- */
 public final class MacroExpander {
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\[([a-zA-Z0-9_]+)]");
 
-    /** {@code [=1+2]} anywhere in a message. Kept separate: expressions are not plain names. */
     private static final Pattern INLINE_MATH = Pattern.compile("\\[=([^\\[\\]]+)]");
 
     private static final Map<String, Supplier<String>> BUILT_INS = new LinkedHashMap<>();
@@ -69,9 +61,6 @@ public final class MacroExpander {
         });
         BUILT_INS.put("dim", () -> level().dimension().identifier().getPath());
         BUILT_INS.put("time", () -> {
-            // 26.1 replaced Level#getDayTime with the world clock. The overworld clock is the right
-            // one to read anyway: it is the time other players mean when they ask, even in the Nether.
-            // Minecraft day starts at 06:00, so shift before splitting into hours and minutes.
             long ticks = (level().getOverworldClockTime() % 24000L + 6000L) % 24000L;
             return String.format(Locale.ROOT, "%02d:%02d", ticks / 1000L, (ticks % 1000L) * 60L / 1000L);
         });
@@ -86,7 +75,6 @@ public final class MacroExpander {
     private MacroExpander() {
     }
 
-    /** Every built-in placeholder name, for the help command and the config screen. */
     public static java.util.Set<String> builtInNames() {
         return BUILT_INS.keySet();
     }
@@ -97,12 +85,9 @@ public final class MacroExpander {
             return message;
         }
 
-        // Maths first: an expression can contain anything, so matching it before the name pattern
-        // keeps a stray bracket inside it from being read as a placeholder.
         if (config.calculatorEnabled) {
             message = expandInlineMath(message);
         }
-        // Each feature answers for itself: turning macros off must not silently take [=1+2] with it.
         if (!config.macrosEnabled) {
             return message;
         }
@@ -117,7 +102,6 @@ public final class MacroExpander {
             if (replacement == null) {
                 replacement = evaluate(key);
             }
-            // No such placeholder: leave the original text alone rather than eating it.
             matcher.appendReplacement(result, Matcher.quoteReplacement(
                     replacement == null ? matcher.group() : replacement));
         }
@@ -136,7 +120,6 @@ public final class MacroExpander {
         return result.toString();
     }
 
-    /** Returns {@code null} for an unknown key, {@code "?"} when the value cannot be read right now. */
     private static String evaluate(String key) {
         Supplier<String> supplier = BUILT_INS.get(key);
         if (supplier == null) {
@@ -144,8 +127,7 @@ public final class MacroExpander {
         }
         try {
             return supplier.get();
-        } catch (RuntimeException unavailable) {
-            // No world, no player, item without durability — a placeholder must never break sending.
+        } catch (RuntimeException e) {
             return "?";
         }
     }

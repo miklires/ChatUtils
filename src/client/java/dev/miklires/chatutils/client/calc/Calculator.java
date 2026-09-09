@@ -2,31 +2,8 @@ package dev.miklires.chatutils.client.calc;
 
 import java.util.Locale;
 
-/**
- * A small arithmetic evaluator for the chat calculator.
- *
- * <p>Recursive descent over the string directly: the grammar is a dozen lines, and a tokeniser plus
- * an expression tree would be more machinery than the problem has.
- *
- * <pre>
- *   expression := term (('+' | '-') term)*
- *   term       := unary (('*' | '/' | '%') unary)*
- *   unary      := ('-' | '+') unary | power
- *   power      := primary ('^' unary)?
- *   primary    := number | constant | name '(' expression (',' expression)* ')' | '(' expression ')'
- * </pre>
- *
- * <p>Unary minus sits above exponentiation, so {@code -2^2} is -4, and the exponent is itself a
- * unary, so {@code 2^3^2} is 512 and {@code 2^-1} is 0.5. Both match how the expression reads on
- * paper, which is the only convention a calculator can safely assume.
- *
- * <p>Trigonometry takes radians, as maths does. Degrees are available as {@code sind}, {@code cosd}
- * and {@code tand} rather than as a mode, because a mode makes the same expression mean two
- * different things depending on a setting the reader cannot see.
- */
 public final class Calculator {
 
-    /** Thrown with a message meant to be shown to the player. */
     public static class CalculatorException extends RuntimeException {
         public CalculatorException(String message) {
             super(message);
@@ -56,8 +33,6 @@ public final class Calculator {
         }
         return result;
     }
-
-    // ------------------------------------------------------------------ grammar
 
     private double expression() {
         double value = term();
@@ -107,7 +82,6 @@ public final class Calculator {
 
     private double power() {
         double base = primary();
-        // The exponent is a unary, which makes ^ right-associative and allows 2^-1.
         return consume('^') ? Math.pow(base, unary()) : base;
     }
 
@@ -139,7 +113,6 @@ public final class Calculator {
                 && (Character.isDigit(input.charAt(position)) || input.charAt(position) == '.')) {
             position++;
         }
-        // Scientific notation: the 'e' only belongs to the number when a digit or sign follows it.
         if (position < input.length() && (input.charAt(position) == 'e' || input.charAt(position) == 'E')) {
             int mark = position;
             position++;
@@ -157,7 +130,7 @@ public final class Calculator {
 
         try {
             return Double.parseDouble(input.substring(start, position));
-        } catch (NumberFormatException malformed) {
+        } catch (NumberFormatException e) {
             throw new CalculatorException("bad number '" + input.substring(start, position) + "'");
         }
     }
@@ -241,8 +214,6 @@ public final class Calculator {
         }
         return Math.log(value) / Math.log(base);
     }
-
-    // ------------------------------------------------------------------ scanning
 
     private void skipSpaces() {
         while (position < input.length() && Character.isWhitespace(input.charAt(position))) {

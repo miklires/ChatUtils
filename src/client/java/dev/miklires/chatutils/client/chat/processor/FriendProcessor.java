@@ -6,7 +6,6 @@ import dev.miklires.chatutils.client.config.ChatUtilsConfig;
 
 import java.util.List;
 
-/** Paints the names of friends in their own colour, wherever they show up in the line. */
 public final class FriendProcessor implements ChatProcessor {
 
     @Override

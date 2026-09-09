@@ -15,18 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-/**
- * Searching the chat without leaving it: a query line above the chat input, with matches listed
- * above that.
- *
- * <p>The full screen is still there behind the {@code H} key and {@code /chatsearch}, and it is the
- * better tool for reading a conversation back. This is for the other case — you are mid-sentence,
- * you need the coordinates someone posted a minute ago, and closing the chat to go looking would
- * lose what you were typing. Clicking a match copies it, so it can go straight back into the line.
- *
- * <p>Matches come from the mod's own log rather than from the chat widget, for the same reason the
- * full screen does: the widget holds wrapped, styled lines with no notion of who sent them.
- */
 public final class InlineSearch {
 
     private static final int CELL = SymbolPalette.CELL;
@@ -48,9 +36,6 @@ public final class InlineSearch {
     private List<ChatHistory.Entry> view = List.of();
     private boolean open;
 
-    /**
-     * @param reserved width taken by the button row to the right, so the query line stops short of it
-     */
     public void build(Font font, int inputY, int screenWidth, int reserved,
                       Consumer<AbstractWidget> register) {
         this.font = font;
@@ -101,12 +86,10 @@ public final class InlineSearch {
         setVisible(false);
     }
 
-    /** Called by the search button. */
     public void toggle() {
         open = !open;
         setVisible(open);
         if (open) {
-            // Typing should land in the query the moment it opens, not in the chat line.
             var screen = Minecraft.getInstance().gui.screen();
             if (screen != null) {
                 screen.setFocused(query);
@@ -121,7 +104,6 @@ public final class InlineSearch {
         }
     }
 
-    /** @param row index of the clicked row, which {@link #refresh} has already filled in */
     private void copy(int row) {
         if (row < view.size() && view.get(row) != null) {
             Minecraft.getInstance().keyboardHandler.setClipboard(view.get(row).plain());
@@ -130,12 +112,8 @@ public final class InlineSearch {
     }
 
     private void refresh() {
-        // An empty query lists the most recent messages rather than nothing: opening the panel and
-        // being shown the tail of the conversation is useful on its own.
         List<ChatHistory.Entry> matches = ChatHistory.search(query.getValue());
 
-        // The log is newest first; the rows read top to bottom like the chat above them, so the
-        // newest match belongs on the bottom row. Padding goes at the top, for the same reason.
         List<ChatHistory.Entry> page = new ArrayList<>(matches.subList(0, Math.min(matches.size(), rows.size())));
         java.util.Collections.reverse(page);
         while (page.size() < rows.size()) {

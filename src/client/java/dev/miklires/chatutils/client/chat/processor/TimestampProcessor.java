@@ -10,7 +10,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
-/** Stamps the local arrival time onto a message, inline or as a tooltip. */
 public final class TimestampProcessor implements ChatProcessor {
 
     private static final DateTimeFormatter FALLBACK = DateTimeFormatter.ofPattern("HH:mm");
@@ -35,7 +34,6 @@ public final class TimestampProcessor implements ChatProcessor {
         }
     }
 
-    /** Compiling a {@link DateTimeFormatter} per message would be wasteful; the pattern rarely changes. */
     private DateTimeFormatter formatter(String pattern) {
         if (pattern == null || pattern.isBlank()) {
             return FALLBACK;

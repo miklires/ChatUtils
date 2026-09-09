@@ -6,14 +6,6 @@ import net.minecraft.network.chat.Style;
 
 import java.util.function.UnaryOperator;
 
-/**
- * One chat line travelling through the processor pipeline.
- *
- * <p>Processors mutate the flattened {@link StyledText} in place and may attach a prefix, which is
- * how the timestamp gets in front. {@link #build()} assembles the final component once, at the end —
- * and returns the untouched original when nothing changed, so unaffected messages keep their vanilla
- * component tree.
- */
 public final class ChatMessage {
 
     private final Component original;
@@ -31,7 +23,6 @@ public final class ChatMessage {
         this.text = StyledText.of(original);
     }
 
-    /** Read-only view of the flattened text. Use the mutators below to change it. */
     public StyledText text() {
         return text;
     }
@@ -52,13 +43,11 @@ public final class ChatMessage {
         return mention;
     }
 
-    /** @param rule the keyword that matched, whose colour and sound override the defaults */
     public void markMention(MentionRule rule) {
         this.mention = true;
         this.mentionRule = rule;
     }
 
-    /** The rule that fired, or null when the message is not a mention. */
     public MentionRule mentionRule() {
         return mentionRule;
     }
@@ -67,7 +56,6 @@ public final class ChatMessage {
         return cancelled;
     }
 
-    /** Drops the line: it never reaches the chat at all. */
     public void cancel() {
         this.cancelled = true;
     }
@@ -87,7 +75,6 @@ public final class ChatMessage {
         modified = true;
     }
 
-    /** Applies a style to the finished line as a whole, including prefix and suffix. */
     public void setWholeLineStyle(UnaryOperator<Style> op) {
         this.wholeLineStyle = op;
         modified = true;

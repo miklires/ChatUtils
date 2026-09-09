@@ -19,7 +19,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Opening the chat releases anything hidden, and adds the symbol row above the input. */
 @Mixin(ChatScreen.class)
 public abstract class ChatScreenMixin extends Screen {
 
@@ -42,18 +41,11 @@ public abstract class ChatScreenMixin extends Screen {
         super(title);
     }
 
-    /**
-     * Builds the mod's button row above the chat input, right to left.
-     *
-     * <p>Each button claims the next slot only if it is actually enabled, so turning one off closes
-     * the gap instead of leaving a hole in the row.
-     */
     @Inject(method = "init", at = @At("TAIL"))
     private void chatutils$onOpen(CallbackInfo ci) {
         ChatUtilsConfig config = ChatUtilsConfig.get();
         int slot = 0;
 
-        // A fresh palette per screen: the widgets belong to this screen and die with it.
         chatutils$palette = new SymbolPalette();
         chatutils$palette.build(this.font, this.input, this.width, slot, this::addRenderableWidget);
         if (config.symbolBarEnabled) {
@@ -71,8 +63,6 @@ public abstract class ChatScreenMixin extends Screen {
             slot++;
         }
 
-        // Built last so its rows draw over the pickers' panels, and given the width the button row
-        // occupies so the query line stops short of the buttons instead of running under them.
         chatutils$search = new InlineSearch();
         chatutils$search.build(this.font, this.input.getY(), this.width,
                 slot * (SymbolPalette.CELL + SymbolPalette.GAP), this::addRenderableWidget);
@@ -83,13 +73,6 @@ public abstract class ChatScreenMixin extends Screen {
         ChatAnimator.onChatOpened();
     }
 
-    /**
-     * The magnifier, opening the search line in place.
-     *
-     * <p>In place rather than on its own screen: searching usually happens mid-sentence, and leaving
-     * the chat to go looking would throw away what you were typing. The full screen is still a
-     * keypress away for reading a conversation back properly.
-     */
     @Unique
     private void chatutils$addSearchButton(int slot) {
         int cell = SymbolPalette.CELL;

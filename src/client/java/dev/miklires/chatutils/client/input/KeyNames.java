@@ -6,17 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Turns a key's written name into the code the window reports, so a binding can live in a config
- * line rather than in a slot registered at startup.
- *
- * <p>Built from GLFW's own constants — the same ones the game uses — rather than parsed out of a
- * translation key, so nothing here depends on a name the game might rename.
- *
- * <p>Forgiving about how the name is written: {@code g}, {@code G}, {@code KEY_G} and
- * {@code page up} all arrive at the same key, because someone typing a binding into a text box
- * should not have to guess the spelling.
- */
 public final class KeyNames {
 
     public static final int UNKNOWN = GLFW.GLFW_KEY_UNKNOWN;
@@ -26,7 +15,6 @@ public final class KeyNames {
     private KeyNames() {
     }
 
-    /** @return the GLFW key code, or {@link #UNKNOWN} when the name means nothing */
     public static int codeOf(String name) {
         if (name == null || name.isBlank()) {
             return UNKNOWN;
@@ -40,7 +28,6 @@ public final class KeyNames {
         return BY_NAME.getOrDefault(cleaned, UNKNOWN);
     }
 
-    /** Every name this understands, for the help text in the settings screen. */
     public static String examples() {
         return "A-Z, 0-9, F1-F12, NUMPAD0-9, UP, DOWN, LEFT, RIGHT, "
                 + "SPACE, ENTER, TAB, INSERT, DELETE, HOME, END, PAGE_UP, PAGE_DOWN, "
@@ -94,7 +81,6 @@ public final class KeyNames {
         names.put("BACKSLASH", GLFW.GLFW_KEY_BACKSLASH);
         names.put("GRAVE_ACCENT", GLFW.GLFW_KEY_GRAVE_ACCENT);
 
-        // Aliases for how people actually write these.
         names.put("CTRL", GLFW.GLFW_KEY_LEFT_CONTROL);
         names.put("SHIFT", GLFW.GLFW_KEY_LEFT_SHIFT);
         names.put("ALT", GLFW.GLFW_KEY_LEFT_ALT);

@@ -15,14 +15,6 @@ import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
-/**
- * Draws the head beside a chat line and shifts that line's text out of its way.
- *
- * <p>Targets the anonymous line consumer inside {@code ChatComponent}, which is the only place that
- * knows both the line being drawn and the y and opacity it is being drawn at. The head goes at the
- * left edge; the text is moved right by translating the chat's own pose, then moved back, so the
- * shift applies to this line and nothing else.
- */
 @Mixin(targets = "net.minecraft.client.gui.components.ChatComponent$1")
 public abstract class ChatLineMixin {
 
@@ -47,8 +39,6 @@ public abstract class ChatLineMixin {
         PlayerInfo owner = ((HeadOwner) (Object) line).chatutils$getOwner();
         offset.set(ChatHeads.offsetFor(owner));
 
-        // Every line of a wrapped message is indented, but only the one that starts it gets a head —
-        // otherwise a three-line message would show the same face three times.
         boolean drawHead = ((MessageStart) (Object) line).chatutils$isMessageStart();
         if (drawHead && owner != null && ChatHeads.graphics != null) {
             int y = args.get(0);
@@ -64,7 +54,6 @@ public abstract class ChatLineMixin {
         shift(-offset.get());
     }
 
-    /** Message tags sit alongside the text, so they need the same shift or they land on the head. */
     @Inject(method = "accept",
             at = @At(value = "INVOKE", target = HANDLE_TAG_ICON), require = 0)
     private void chatutils$shiftTagIcon(CallbackInfo ci, @Share("offset") LocalIntRef offset) {

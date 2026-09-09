@@ -13,7 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
-/** Key bindings for the hidden-chat features. */
 public final class ChatUtilsKeys {
 
     private static KeyMapping.Category category;
@@ -75,8 +74,6 @@ public final class ChatUtilsKeys {
 
         CommandKeys.tick();
 
-        // Peek is a held key, not a press: the chat is drawn for exactly as long as it is down, and
-        // goes away the moment it is released. Nothing is added or removed, only shown.
         ChatVisibility.setPeeking(peek.isDown());
     }
 

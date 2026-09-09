@@ -15,27 +15,10 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
-/**
- * Reads a YouTube live stream's chat through the official Data API.
- *
- * <p>Unlike Twitch, YouTube has no anonymous read endpoint, so this needs an API key the player
- * creates in Google Cloud themselves. That is a real cost and it is why this half is off by default:
- * a key is a credential, it lands in {@code chatutils.json} in plain text like every other setting,
- * and it counts against a daily quota that live-chat polling eats quickly.
- *
- * <p>The alternative — scraping the page's internal chat endpoint the way most desktop chat clients
- * do — needs no key, but it is undocumented, breaks whenever YouTube changes it, and is exactly the
- * kind of thing that gets an IP blocked. The supported API is the honest option even though it asks
- * more of the player.
- *
- * <p>The server dictates the poll interval and this obeys it. Polling faster than told is how a key
- * gets its quota burned before the stream is over.
- */
 public final class YouTubeSource extends StreamSource {
 
     private static final String API = "https://www.googleapis.com/youtube/v3/";
 
-    /** Used until the API states its own interval, and as a floor if it ever asks for less. */
     private static final long MIN_POLL_MS = 3000L;
     private static final long MAX_POLL_MS = 60_000L;
 
@@ -73,8 +56,6 @@ public final class YouTubeSource extends StreamSource {
         }
 
         String pageToken = null;
-        // The first page is the whole backlog since the stream started; skipping it keeps a join
-        // from dumping thousands of old messages into the Minecraft chat.
         boolean firstPage = true;
 
         while (shouldRun() && !closed) {
@@ -111,7 +92,6 @@ public final class YouTubeSource extends StreamSource {
         closed = true;
     }
 
-    /** Turns a video id into the live chat id the messages endpoint wants. */
     private String resolveLiveChatId() throws Exception {
         JsonObject response = get(API + "videos?part=liveStreamingDetails&id="
                 + encode(videoId) + "&key=" + encode(apiKey));
@@ -136,8 +116,6 @@ public final class YouTubeSource extends StreamSource {
             return;
         }
 
-        // Superchats, memberships and moderation events all live in this feed; only plain text
-        // messages carry displayMessage, so anything without it is skipped rather than guessed at.
         String text = string(snippet, "displayMessage");
         String name = string(author, "displayName");
         if (text == null || text.isBlank() || name == null || name.isBlank()) {
@@ -158,9 +136,6 @@ public final class YouTubeSource extends StreamSource {
         String responseBody = HttpSupport.readUtf8(response, HttpSupport.MAX_JSON_BYTES);
 
         if (response.statusCode() != 200) {
-            // Google's error bodies are far more useful than the status code, but they can also echo
-            // the request — so only the message is taken, never the whole body, to keep the key out
-            // of the log and out of the chat.
             String reason = null;
             try {
                 JsonObject error = object(JsonParser.parseString(responseBody).getAsJsonObject(), "error");

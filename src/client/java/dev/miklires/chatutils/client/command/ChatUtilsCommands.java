@@ -21,21 +21,6 @@ import net.minecraft.network.chat.Component;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * Everything the mod can do from the chat line, without opening a screen.
- *
- * <p>Client-side commands: they never reach the server, so they work on any server and cannot be
- * mistaken for cheating. Short aliases exist for the ones worth typing mid-fight ({@code /hidechat});
- * everything else hangs off {@code /chatutils} so the tab-completion list stays honest about what
- * belongs to this mod.
- *
- * <p>Screens are opened on the next tick rather than immediately. A command runs while the chat
- * screen is still closing itself, and a screen set inside that would be closed a moment later.
- *
- * <p>Built with Brigadier's own builders rather than Fabric's {@code ClientCommandManager}, which
- * this API version no longer has. That class was two one-line factories that did nothing but pin the
- * source type, so calling Brigadier directly is the same code with one less thing to go missing.
- */
 public final class ChatUtilsCommands {
 
     private ChatUtilsCommands() {
@@ -89,7 +74,6 @@ public final class ChatUtilsCommands {
                             .then(argument("id", StringArgumentType.word())
                                     .executes(context -> reveal(StringArgumentType.getString(context, "id"))))));
 
-            // The ones worth typing on their own.
             dispatcher.register(literal("hidechat").executes(context -> toggle("hide_chat",
                     () -> ChatUtilsConfig.get().hideChatEnabled,
                     value -> ChatUtilsConfig.get().hideChatEnabled = value)));
@@ -100,7 +84,6 @@ public final class ChatUtilsCommands {
         });
     }
 
-    /** What {@code ClientCommandManager} did: a builder already pinned to the client source type. */
     private static LiteralArgumentBuilder<FabricClientCommandSource> literal(String name) {
         return LiteralArgumentBuilder.literal(name);
     }
@@ -120,10 +103,6 @@ public final class ChatUtilsCommands {
         return 1;
     }
 
-    /**
-     * Flips a setting and says what it now is, naming it with the same string the settings screen
-     * uses — so the command and the screen can never drift into calling one thing two names.
-     */
     private static int toggle(String optionKey, Supplier<Boolean> getter, Consumer<Boolean> setter) {
         boolean now = !getter.get();
         setter.accept(now);
@@ -135,7 +114,6 @@ public final class ChatUtilsCommands {
         return 1;
     }
 
-    /** Lists what the mod answers to, since a command nobody knows about is not control. */
     private static int help() {
         reply(Component.translatable("chatutils.command.help_title"));
         for (String line : new String[]{"toggles", "screens", "text", "keys"}) {
@@ -181,7 +159,6 @@ public final class ChatUtilsCommands {
         return 1;
     }
 
-    /** Shows what a censored word really said, to whoever asked and nobody else. */
     private static int reveal(String id) {
         String original = FilterProcessor.reveal(id);
         if (original == null) {
@@ -197,10 +174,6 @@ public final class ChatUtilsCommands {
         Minecraft.getInstance().execute(action);
     }
 
-    /**
-     * Answers into the chat rather than through the command source, so the reply goes through the
-     * same delivery path as everything else the mod says.
-     */
     private static void reply(Component message) {
         ChatDelivery.sendSystem(message.copy().withStyle(ChatFormatting.GRAY));
     }

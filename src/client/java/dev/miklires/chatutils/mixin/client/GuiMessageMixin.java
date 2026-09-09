@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Remembers who sent a chat message, so its head survives the chat being rebuilt. */
 @Mixin(GuiMessage.class)
 public class GuiMessageMixin implements HeadOwner {
 

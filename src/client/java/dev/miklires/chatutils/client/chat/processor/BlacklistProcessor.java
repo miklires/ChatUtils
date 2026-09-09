@@ -3,7 +3,6 @@ package dev.miklires.chatutils.client.chat.processor;
 import dev.miklires.chatutils.client.chat.ChatMessage;
 import dev.miklires.chatutils.client.config.ChatUtilsConfig;
 
-/** Drops messages written by players on the blacklist. */
 public final class BlacklistProcessor implements ChatProcessor {
 
     @Override

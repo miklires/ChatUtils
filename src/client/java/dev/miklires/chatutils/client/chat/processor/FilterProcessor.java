@@ -13,25 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Censors — or hides outright — messages containing a blocked word.
- *
- * <p>A censored word can be clicked to see what it really said. The filter is there so the word does
- * not hit you unasked, not to keep a secret from you: you wrote the list, and being unable to check
- * what was matched makes a false positive impossible to diagnose. The original goes to you alone and
- * is never sent anywhere.
- *
- * <p>Matching runs through {@code TextMatcher}, which folds the mod's Unicode alphabets back to
- * plain letters first — otherwise picking a font would walk straight past the filter.
- */
 public final class FilterProcessor implements ChatProcessor {
 
-    /**
-     * Originals of recently censored words, keyed by the id in their click event.
-     *
-     * <p>Bounded and in memory only. Nothing here is ever written to disk: the whole point of the
-     * filter is that these words are unwelcome, and a file of them would be worse than the messages.
-     */
     private static final int REMEMBERED = 128;
 
     private static final Map<String, String> originals = new LinkedHashMap<>() {
@@ -52,8 +35,6 @@ public final class FilterProcessor implements ChatProcessor {
         char censor = config.filterCensorChar == null || config.filterCensorChar.isEmpty()
                 ? '*'
                 : config.filterCensorChar.charAt(0);
-        // Snapshot the text once: censoring only overwrites characters, so indices stay valid, and
-        // matching against the snapshot keeps one blocked word from matching the stars of another.
         String plain = message.plain();
 
         for (String word : config.filteredWords) {
@@ -77,7 +58,6 @@ public final class FilterProcessor implements ChatProcessor {
         }
     }
 
-    /** Hangs a "show me what this said" click event on the stars that replaced the word. */
     private static void offerReveal(ChatMessage message, String original, int start, int end) {
         String id = String.valueOf(nextId++);
         originals.put(id, original);
@@ -88,7 +68,6 @@ public final class FilterProcessor implements ChatProcessor {
                         Component.translatable("chatutils.filter.reveal_hint"))));
     }
 
-    /** @return what the word said, or null once it has aged out of the buffer */
     @Nullable
     public static String reveal(String id) {
         return originals.get(id);

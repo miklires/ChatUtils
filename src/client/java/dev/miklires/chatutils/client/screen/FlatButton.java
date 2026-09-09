@@ -9,13 +9,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-/**
- * A button drawn like the chat itself: a flat translucent panel, no border, no vanilla texture.
- *
- * <p>Extends {@link AbstractWidget} rather than {@code Button} because {@code AbstractButton} marks
- * its render method final and always draws the raised stone sprite — which reads as a settings menu,
- * not as part of the chat. The cost is handling the click here, which is one method.
- */
 public class FlatButton extends AbstractWidget {
 
     private static final int BACKGROUND = 0x90000000;
@@ -35,12 +28,10 @@ public class FlatButton extends AbstractWidget {
         this.onPress = onPress;
     }
 
-    /** Marks this as the active tab, so it stays lit while the pointer is elsewhere. */
     public void setSelected(boolean selected) {
         this.selected = selected;
     }
 
-    /** Left-aligns the label, for rows of text where centring would look arbitrary. */
     public void setLeftAligned(boolean leftAligned) {
         this.leftAligned = leftAligned;
     }

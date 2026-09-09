@@ -7,18 +7,6 @@ import net.minecraft.network.chat.Style;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 
-/**
- * A chat message flattened to one style per character.
- *
- * <p>Chat components are trees, which makes "colour the word at index 12..17" awkward: the word may
- * straddle several siblings. Flattening to a parallel {@code char[]}/{@code Style[]} pair lets every
- * processor work in plain-string coordinates and hands the regrouping problem to
- * {@link #toComponent()}.
- *
- * <p>Edits must preserve length. That covers everything the mod needs — censoring swaps characters
- * one-for-one, highlighting only touches styles — and keeps the index maths honest for processors
- * that run later in the pipeline.
- */
 public final class StyledText {
 
     private final char[] chars;
@@ -53,7 +41,6 @@ public final class StyledText {
         return chars.length == 0;
     }
 
-    /** The message with all formatting stripped. Cached, so repeated matching stays cheap. */
     public String plain() {
         if (cachedPlain == null) {
             cachedPlain = new String(chars);
@@ -61,7 +48,6 @@ public final class StyledText {
         return cachedPlain;
     }
 
-    /** Applies {@code op} to the style of every character in {@code [from, to)}. */
     public void styleRange(int from, int to, UnaryOperator<Style> op) {
         int start = Math.max(0, from);
         int end = Math.min(chars.length, to);
@@ -70,7 +56,6 @@ public final class StyledText {
         }
     }
 
-    /** Overwrites every character in {@code [from, to)} with {@code fill}, keeping styles intact. */
     public void fillRange(int from, int to, char fill) {
         int start = Math.max(0, from);
         int end = Math.min(chars.length, to);
@@ -80,7 +65,6 @@ public final class StyledText {
         cachedPlain = null;
     }
 
-    /** Rebuilds a component, merging neighbouring characters that ended up with the same style. */
     public Component toComponent() {
         MutableComponent result = Component.empty();
         if (chars.length == 0) {

@@ -15,24 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/**
- * The symbol picker on the other screens where you type: signs, books, the anvil.
- *
- * <p>Added through Fabric's screen event rather than a mixin per screen. Three mixins would mean
- * three exact class names to be right about, and being wrong about a remapped name is a crash on
- * startup; here a name that no longer matches is simply a screen without the button.
- *
- * <p>The widget goes in through {@code Screen}'s own method, reached by an invoker. Fabric's screen
- * API does still hand out the widget list — as {@code Screens.getWidgets}, renamed from
- * {@code getButtons} — but going through {@code Screen} itself depends on one less name that can be
- * renamed, and {@code Screen} is not going anywhere.
- *
- * <p>How a symbol is inserted depends on what the screen is made of. An anvil has a real text box,
- * so the character goes straight into it. Signs and books draw their own text with no widget to
- * reach, and the keyboard API for faking a keystroke has moved between versions — so there the
- * symbol goes to the clipboard instead and the tooltip says to paste it. Half a feature that works
- * beats a whole one that crashes on a version bump.
- */
 public final class SymbolsEverywhere {
 
     private static final Set<String> SCREENS = Set.of(
@@ -56,11 +38,6 @@ public final class SymbolsEverywhere {
         });
     }
 
-    /**
-     * A compact picker: one category at a time, paged, no search box. The chat has room for the full
-     * panel; a sign screen does not, and a book that cannot be read past its own symbol picker is
-     * worse than no picker.
-     */
     private static final class Panel {
 
         private final Screen screen;
@@ -88,7 +65,6 @@ public final class SymbolsEverywhere {
             background.active = false;
             add(background, true);
 
-            // Category strip along the top, then the grid, then paging.
             List<SymbolLibrary.Category> categories = SymbolLibrary.categories();
             for (int i = 0; i < categories.size() && i < COLUMNS; i++) {
                 int index = i;
@@ -136,7 +112,6 @@ public final class SymbolsEverywhere {
             setVisible(false);
         }
 
-        /** @param hideable whether the widget belongs to the panel the toggle shows and hides */
         private void add(AbstractWidget widget, boolean hideable) {
             if (hideable) {
                 panel.add(widget);
@@ -191,7 +166,6 @@ public final class SymbolsEverywhere {
             }
         }
 
-        /** The screen's text box, when it has one. Signs and books draw their own text instead. */
         @Nullable
         private EditBox textBox() {
             for (Object child : screen.children()) {

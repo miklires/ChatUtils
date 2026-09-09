@@ -12,13 +12,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Carries the sender down to a single display line.
- *
- * <p>A message is split into lines when it is queued and again whenever the chat is rebuilt — on a
- * resize, say — so the owner is taken from whichever message is being split at the time rather than
- * from the message that happened to arrive last.
- */
 @Mixin(GuiMessage.Line.class)
 public class GuiMessageLineMixin implements HeadOwner, MessageStart {
 

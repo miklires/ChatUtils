@@ -12,19 +12,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-/**
- * The symbol picker: a button beside the chat input that opens a panel of characters, grouped into
- * tabs, searchable by Unicode name and paged.
- *
- * <p>Drawn flat and translucent so it reads as part of the chat rather than a settings menu.
- *
- * <p>Grid cells are created once and relabelled when the tab, page or query changes. With thousands
- * of characters available, building a widget per character would be absurd; only the visible page
- * ever exists as widgets.
- */
 public final class SymbolPalette {
 
-    /** Shared with the chat screen so the buttons above the input line up as one row. */
     public static final int CELL = 14;
     public static final int GAP = 1;
     public static final int MARGIN = 2;
@@ -33,17 +22,10 @@ public final class SymbolPalette {
     private static final int MAX_ROWS = 10;
     private static final int MIN_ROWS = 2;
 
-    /** Rows above the grid (search, tabs) plus the paging row below it. */
     private static final int FIXED_ROWS = 3;
 
-    /** Kaomoji need a whole row each; a grid cell would smear them. */
     private static final int WIDE_COLUMNS = 2;
 
-    /**
-     * Blank pixels between the tab row and the grid. Without it the tabs sit one pixel from the
-     * first row of symbols and read as part of it — they are all single glyphs in identical cells,
-     * so nothing else tells them apart.
-     */
     private static final int SEPARATOR = 4;
 
     private final List<SymbolLibrary.Category> categories = new ArrayList<>();
@@ -60,13 +42,6 @@ public final class SymbolPalette {
     private int rows = MAX_ROWS;
     private boolean open;
 
-    /**
-     * Creates the toggle button and the (initially hidden) panel, handing every widget to
-     * {@code register} in back-to-front order.
-     *
-     * @param input the chat input; symbols are typed into it and it is narrowed to fit the button
-     * @param slot  how many buttons already sit to the right of this one, so the row lines up
-     */
     public void build(Font font, EditBox input, int screenWidth, int slot,
                       Consumer<AbstractWidget> register) {
         if (!ChatUtilsConfig.get().symbolBarEnabled) {
@@ -78,9 +53,6 @@ public final class SymbolPalette {
             return;
         }
 
-        // Sit above the input rather than inside it. The chat screen paints the input's background
-        // itself, at its own width, so anything placed on that row lands on top of that fill — and
-        // narrowing the input does not move the fill with it.
         int toggleTop = input.getY() - CELL - MARGIN;
         register.accept(new FlatButton(screenWidth - MARGIN - CELL - slot * (CELL + GAP),
                 toggleTop, CELL, CELL, Component.literal("☺"), this::toggle));
@@ -88,14 +60,12 @@ public final class SymbolPalette {
         int panelWidth = COLUMNS * (CELL + GAP) - GAP;
         int left = Math.max(MARGIN, screenWidth - MARGIN - panelWidth);
 
-        // Rows shrink on short windows rather than letting the panel run off the top of the screen.
         int available = toggleTop - MARGIN * 2 - (CELL + GAP) * FIXED_ROWS - SEPARATOR;
         rows = Math.max(MIN_ROWS, Math.min(MAX_ROWS, available / (CELL + GAP)));
 
         int panelHeight = (CELL + GAP) * (FIXED_ROWS + rows) - GAP + SEPARATOR;
         int top = toggleTop - MARGIN - panelHeight;
 
-        // Registered first so everything else draws on top of it. Inactive, so it swallows no clicks.
         FlatButton background = new FlatButton(left - 1, top - 1, panelWidth + 2, panelHeight + 2,
                 Component.empty(), () -> {
                 });
@@ -115,8 +85,6 @@ public final class SymbolPalette {
         setVisible(false);
     }
 
-    // ------------------------------------------------------------------ construction
-
     private void buildSearch(Font font, int left, int top, int width, Consumer<AbstractWidget> register) {
         search = new EditBox(font, left, top, width, CELL, Component.translatable("chatutils.symbols.search"));
         search.setBordered(false);
@@ -130,7 +98,6 @@ public final class SymbolPalette {
     }
 
     private void buildTabs(int left, int top, int panelWidth, Consumer<AbstractWidget> register) {
-        // Its own strip behind the row, so the tabs read as a header rather than as a row of symbols.
         FlatButton strip = new FlatButton(left - 1, top - 1, panelWidth + 2, CELL + 2,
                 Component.empty(), () -> {
                 });
@@ -150,11 +117,6 @@ public final class SymbolPalette {
         }
     }
 
-    /**
-     * Two grids over the same area: a dense one of single characters and a sparse one of full-width
-     * rows. Only the layout the current tab asks for is ever visible, so the panel keeps its size
-     * and the tabs stay where they were.
-     */
     private void buildGrid(EditBox input, int left, int top, int panelWidth,
                            Consumer<AbstractWidget> register) {
         for (int i = 0; i < COLUMNS * rows; i++) {
@@ -176,7 +138,6 @@ public final class SymbolPalette {
     private FlatButton makeCell(EditBox input, List<FlatButton> owner, int x, int y, int width,
                                 int index, Consumer<AbstractWidget> register) {
         FlatButton cell = new FlatButton(x, y, width, CELL, Component.empty(), () -> {
-            // Only the visible layout may insert: both grids hold an index into the same page.
             if (owner == activeCells() && index < view.size()) {
                 input.insertText(view.get(index).text());
             }
@@ -186,7 +147,6 @@ public final class SymbolPalette {
         return cell;
     }
 
-    /** The layout the current tab uses. A search spans every tab, so it always uses the dense one. */
     private List<FlatButton> activeCells() {
         boolean searching = search != null && !search.getValue().trim().isEmpty();
         return !searching && categories.get(categoryIndex).wide() ? wideCells : cells;
@@ -208,8 +168,6 @@ public final class SymbolPalette {
         }
     }
 
-    // ------------------------------------------------------------------ state
-
     private void toggle() {
         open = !open;
         setVisible(open);
@@ -220,7 +178,6 @@ public final class SymbolPalette {
             widget.visible = visible;
         }
         if (visible) {
-            // Re-hides whichever grid the current tab is not using.
             refresh();
         }
     }
@@ -238,13 +195,10 @@ public final class SymbolPalette {
     }
 
     private int pageCount(List<SymbolLibrary.Symbol> source) {
-        // Guarded: the search box's responder exists before the grids are built, so a value change
-        // in between would divide by an empty page.
         int perPage = Math.max(1, activeCells().size());
         return Math.max(1, (source.size() + perPage - 1) / perPage);
     }
 
-    /** The symbols the current tab selects, or the matches for the current query. */
     private List<SymbolLibrary.Symbol> source() {
         String query = search == null ? "" : search.getValue().trim();
         if (query.isEmpty()) {
@@ -273,8 +227,6 @@ public final class SymbolPalette {
         int from = page * perPage;
         view = source.subList(from, Math.min(source.size(), from + perPage));
 
-        // The unused layout is emptied and hidden rather than left as it was, so switching tabs
-        // cannot leave a stale row of the other grid showing through.
         for (FlatButton cell : (active == cells ? wideCells : cells)) {
             cell.setMessage(Component.empty());
             cell.setTooltip(null);
