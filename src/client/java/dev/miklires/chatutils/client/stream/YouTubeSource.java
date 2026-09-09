@@ -4,7 +4,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.miklires.chatutils.client.net.HttpSupport;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -35,6 +37,7 @@ public final class YouTubeSource extends StreamSource {
 
     /** Used until the API states its own interval, and as a floor if it ever asks for less. */
     private static final long MIN_POLL_MS = 3000L;
+    private static final long MAX_POLL_MS = 60_000L;
 
     private final String videoId;
     private final String apiKey;
@@ -49,6 +52,12 @@ public final class YouTubeSource extends StreamSource {
         super(videoId);
         this.videoId = videoId.trim();
         this.apiKey = apiKey.trim();
+        if (!this.videoId.matches("[A-Za-z0-9_-]{6,64}")) {
+            throw new IllegalArgumentException("invalid YouTube video id");
+        }
+        if (this.apiKey.isEmpty() || this.apiKey.length() > 4096) {
+            throw new IllegalArgumentException("invalid YouTube API key");
+        }
     }
 
     @Override
@@ -91,7 +100,7 @@ public final class YouTubeSource extends StreamSource {
             long wait = MIN_POLL_MS;
             JsonElement interval = response.get("pollingIntervalMillis");
             if (interval != null && interval.isJsonPrimitive()) {
-                wait = Math.max(MIN_POLL_MS, interval.getAsLong());
+                wait = Math.clamp(interval.getAsLong(), MIN_POLL_MS, MAX_POLL_MS);
             }
             Thread.sleep(wait);
         }
@@ -145,19 +154,23 @@ public final class YouTubeSource extends StreamSource {
                 .GET()
                 .build();
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        JsonObject body = JsonParser.parseString(response.body()).getAsJsonObject();
+        HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        String responseBody = HttpSupport.readUtf8(response, HttpSupport.MAX_JSON_BYTES);
 
         if (response.statusCode() != 200) {
             // Google's error bodies are far more useful than the status code, but they can also echo
             // the request — so only the message is taken, never the whole body, to keep the key out
             // of the log and out of the chat.
-            JsonObject error = object(body, "error");
-            String reason = error == null ? null : string(error, "message");
+            String reason = null;
+            try {
+                JsonObject error = object(JsonParser.parseString(responseBody).getAsJsonObject(), "error");
+                reason = error == null ? null : HttpSupport.safeReason(string(error, "message"));
+            } catch (RuntimeException ignored) {
+            }
             throw new IllegalStateException("YouTube API " + response.statusCode()
                     + (reason == null ? "" : ": " + reason));
         }
-        return body;
+        return JsonParser.parseString(responseBody).getAsJsonObject();
     }
 
     private static JsonObject object(JsonObject parent, String key) {

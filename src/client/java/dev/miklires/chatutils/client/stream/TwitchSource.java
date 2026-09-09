@@ -27,6 +27,7 @@ public final class TwitchSource extends StreamSource {
 
     /** Twitch drops a silent connection; it pings first, and expects the pong within five minutes. */
     private static final Duration IDLE_TIMEOUT = Duration.ofMinutes(6);
+    private static final int MAX_PARTIAL_CHARS = 65_536;
 
     private final String channel;
     private final StringBuilder partial = new StringBuilder();
@@ -47,7 +48,14 @@ public final class TwitchSource extends StreamSource {
      * whether to reconnect. It has to compare like for like, and the rule lives here.
      */
     public static String normalise(String channel) {
-        return channel == null ? "" : channel.trim().toLowerCase(Locale.ROOT).replace("#", "");
+        if (channel == null) {
+            return "";
+        }
+        String normalized = channel.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("#")) {
+            normalized = normalized.substring(1);
+        }
+        return normalized.matches("[a-z0-9_]{1,25}") ? normalized : "";
     }
 
     @Override
@@ -222,6 +230,12 @@ public final class TwitchSource extends StreamSource {
         @Override
         public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
             partial.append(data);
+            if (partial.length() > MAX_PARTIAL_CHARS) {
+                partial.setLength(0);
+                webSocket.abort();
+                finished.countDown();
+                return null;
+            }
             if (last) {
                 int newline;
                 while ((newline = partial.indexOf("\n")) >= 0) {

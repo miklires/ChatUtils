@@ -6,11 +6,13 @@ import com.google.gson.JsonParser;
 import dev.miklires.chatutils.client.chat.ChatDelivery;
 import dev.miklires.chatutils.client.chat.ChatHistory;
 import dev.miklires.chatutils.client.config.ChatUtilsConfig;
+import dev.miklires.chatutils.client.net.HttpSupport;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -19,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Translates a chat message on demand, through a LibreTranslate-compatible endpoint.
@@ -47,7 +50,7 @@ public final class Translator {
             .build();
 
     /** One request at a time: a held key must not open twenty connections. */
-    private static volatile boolean busy;
+    private static final AtomicBoolean busy = new AtomicBoolean();
 
     private Translator() {
     }
@@ -77,21 +80,28 @@ public final class Translator {
         if (text == null || text.isBlank()) {
             return;
         }
-        if (busy) {
+        URI endpointUri;
+        try {
+            endpointUri = HttpSupport.translationEndpoint(endpoint);
+        } catch (IllegalArgumentException e) {
+            report(Component.translatable("chatutils.translate.failed", e.getMessage())
+                    .withStyle(ChatFormatting.RED));
             return;
         }
-        busy = true;
+        if (!busy.compareAndSet(false, true)) {
+            return;
+        }
 
         String body = request(text, config);
         Thread worker = new Thread(() -> {
             try {
-                answers.add(translated(endpoint, body));
+                answers.add(translated(endpointUri, body));
             } catch (Exception failure) {
                 LOGGER.warn("Translation failed: {}", failure.toString());
                 answers.add(Component.translatable("chatutils.translate.failed", failure.getMessage())
                         .withStyle(ChatFormatting.RED));
             } finally {
-                busy = false;
+                busy.set(false);
             }
         }, "chatutils-translate");
         worker.setDaemon(true);
@@ -120,24 +130,31 @@ public final class Translator {
         return json.toString();
     }
 
-    private static Component translated(String endpoint, String body) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+    private static Component translated(URI endpoint, String body) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(endpoint)
                 .timeout(Duration.ofSeconds(20))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
 
-        HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-        JsonObject answer = JsonParser.parseString(response.body()).getAsJsonObject();
+        HttpResponse<InputStream> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        String responseBody = HttpSupport.readUtf8(response, HttpSupport.MAX_JSON_BYTES);
 
         if (response.statusCode() != 200) {
             // The endpoint's own message is far more useful than the status code, but never the whole
             // body — the request is echoed back by some instances, key included.
-            JsonElement error = answer.get("error");
-            String reason = error != null && error.isJsonPrimitive() ? error.getAsString() : null;
+            String reason = null;
+            try {
+                JsonElement error = JsonParser.parseString(responseBody).getAsJsonObject().get("error");
+                reason = error != null && error.isJsonPrimitive()
+                        ? HttpSupport.safeReason(error.getAsString()) : null;
+            } catch (RuntimeException ignored) {
+            }
             throw new IllegalStateException(response.statusCode() + (reason == null ? "" : ": " + reason));
         }
+
+        JsonObject answer = JsonParser.parseString(responseBody).getAsJsonObject();
 
         JsonElement text = answer.get("translatedText");
         if (text == null || !text.isJsonPrimitive()) {
