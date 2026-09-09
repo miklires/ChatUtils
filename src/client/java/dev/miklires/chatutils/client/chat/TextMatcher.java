@@ -19,6 +19,8 @@ import java.util.regex.PatternSyntaxException;
  * callers use these ranges to mask or style the real line.
  */
 public final class TextMatcher {
+    private static final int MAX_REGEX_TEXT_LENGTH = 4096;
+    private static final int MAX_MATCHES = 256;
 
     /** Half-open {@code [start, end)} range of a match. */
     public record Match(int start, int end) {
@@ -59,12 +61,17 @@ public final class TextMatcher {
             return matches;
         }
         try {
-            ChatFont.Folded folded = ChatFont.fold(text);
+            String boundedText = text.length() <= MAX_REGEX_TEXT_LENGTH
+                    ? text : text.substring(0, MAX_REGEX_TEXT_LENGTH);
+            ChatFont.Folded folded = ChatFont.fold(boundedText);
             Pattern pattern = Pattern.compile(regex, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE);
             Matcher matcher = pattern.matcher(folded.text());
             while (matcher.find()) {
                 if (matcher.end() > matcher.start()) {
                     matches.add(translate(folded, matcher.start(), matcher.end()));
+                    if (matches.size() == MAX_MATCHES) {
+                        break;
+                    }
                 }
             }
         } catch (PatternSyntaxException ignored) {

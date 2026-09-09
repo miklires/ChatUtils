@@ -16,7 +16,10 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineEvent;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +40,7 @@ public final class SoundPlayer {
     private static final Map<String, byte[]> FILE_CACHE = new HashMap<>();
 
     private static final int MAX_CONCURRENT_CLIPS = 4;
+    private static final long MAX_WAV_BYTES = 8L * 1024L * 1024L;
     private static int activeClips;
 
     private SoundPlayer() {
@@ -126,7 +130,18 @@ public final class SoundPlayer {
             return FILE_CACHE.get(fileName);
         }
 
-        Path path = soundsDirectory().resolve(fileName).normalize();
+        Path supplied;
+        try {
+            supplied = Path.of(fileName);
+        } catch (InvalidPathException e) {
+            FILE_CACHE.put(fileName, null);
+            return null;
+        }
+        if (supplied.isAbsolute() || supplied.getNameCount() != 1) {
+            FILE_CACHE.put(fileName, null);
+            return null;
+        }
+        Path path = soundsDirectory().resolve(supplied).normalize();
         // Keep the lookup inside the sounds directory: the file name comes from a config string.
         if (!path.startsWith(soundsDirectory())) {
             FILE_CACHE.put(fileName, null);
@@ -135,10 +150,17 @@ public final class SoundPlayer {
 
         byte[] data = null;
         try {
-            if (Files.isRegularFile(path)) {
-                data = Files.readAllBytes(path);
+            if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
+                    && !Files.isSymbolicLink(path)) {
+                try (InputStream input = Files.newInputStream(path)) {
+                    byte[] candidate = input.readNBytes((int) MAX_WAV_BYTES + 1);
+                    if (candidate.length <= MAX_WAV_BYTES) {
+                        data = candidate;
+                    }
+                }
             } else {
-                LOGGER.warn("Custom sound {} not found in {}", fileName, soundsDirectory());
+                LOGGER.warn("Custom sound {} is missing, linked, or larger than {} MiB",
+                        fileName, MAX_WAV_BYTES / 1024 / 1024);
             }
         } catch (IOException failure) {
             LOGGER.warn("Could not read custom sound {}: {}", fileName, failure.toString());
