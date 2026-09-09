@@ -1,6 +1,8 @@
 plugins {
     id 'net.fabricmc.fabric-loom' version '1.17-SNAPSHOT'
     id 'maven-publish'
+    id 'com.modrinth.minotaur' version '2.9.0'
+    id 'net.darkhax.curseforgegradle' version '1.3.33'
 }
 
 version = project.mod_version
@@ -102,5 +104,54 @@ publishing {
     }
 
     repositories {
+    }
+}
+
+def releaseNotes = """Adds automated releases for Modrinth and CurseForge with accurate Minecraft 26.2, Fabric, Java 25, client-environment, and dependency metadata."""
+
+modrinth {
+    token = System.getenv("MODRINTH_TOKEN")
+    projectId = System.getenv("MODRINTH_PROJECT_ID")
+    versionNumber = project.version
+    versionName = "Chat Utils ${project.version}"
+    versionType = "release"
+    uploadFile = tasks.jar
+    gameVersions = [project.minecraft_version]
+    loaders = ["fabric"]
+    changelog = releaseNotes
+    syncBodyFrom = rootProject.file("README.md").text
+    dependencies {
+        required.project "fabric-api"
+        embedded.project "yacl"
+        optional.project "modmenu"
+    }
+}
+
+tasks.modrinth.dependsOn(tasks.modrinthSyncBody)
+
+def curseForgeToken = System.getenv("CURSEFORGE_TOKEN")
+def curseForgeProjectId = System.getenv("CURSEFORGE_PROJECT_ID")
+
+if (curseForgeToken && curseForgeProjectId) {
+    tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+        apiToken = curseForgeToken
+        def mainFile = upload(curseForgeProjectId, tasks.jar)
+        mainFile.displayName = "Chat Utils ${project.version}"
+        mainFile.releaseType = "release"
+        mainFile.changelogType = "markdown"
+        mainFile.changelog = releaseNotes
+        mainFile.addGameVersion(project.minecraft_version)
+        mainFile.addModLoader("Fabric")
+        mainFile.addEnvironment("Client")
+        mainFile.addJavaVersion("Java 25")
+        mainFile.addRequirement("fabric-api")
+        mainFile.addEmbedded("yacl")
+        mainFile.addOptional("modmenu")
+    }
+} else {
+    tasks.register("publishCurseForge") {
+        doLast {
+            throw new GradleException("CURSEFORGE_TOKEN and CURSEFORGE_PROJECT_ID are required")
+        }
     }
 }
