@@ -15,8 +15,10 @@ class ChatEncryptionTest {
     @Test void rejectsWrongKeyAndTampering() {
         String token = ChatEncryption.encrypt("secret", "key one");
         assertNull(ChatEncryption.decrypt(token, "key two"));
-        char replacement = token.charAt(token.length() - 1) == 'A' ? 'B' : 'A';
-        assertNull(ChatEncryption.decrypt(token.substring(0, token.length() - 1) + replacement, "key one"));
+        int changedIndex = ChatEncryption.MARKER.length() + 5;
+        char replacement = token.charAt(changedIndex) == 'A' ? 'B' : 'A';
+        String tampered = token.substring(0, changedIndex) + replacement + token.substring(changedIndex + 1);
+        assertNull(ChatEncryption.decrypt(tampered, "key one"));
     }
 
     @Test void calculatesPacketLimitAndRejectsBlankInputs() {

@@ -12,7 +12,7 @@
     "sources": "https://github.com/miklires/ChatUtils",
     "issues": "https://github.com/miklires/ChatUtils/issues"
   },
-  "license": "All-Rights-Reserved",
+  "license": "MIT",
   "icon": "assets/chatutils/icon.png",
   "environment": "client",
   "entrypoints": {
