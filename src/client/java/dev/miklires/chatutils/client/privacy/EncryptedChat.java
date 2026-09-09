@@ -39,7 +39,7 @@ public final class EncryptedChat {
         }
 
         int max = ChatEncryption.maxPlaintextLength(CHAT_LIMIT);
-        if (finalPlaintext.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= max) {
+        if (ChatEncryption.fits(finalPlaintext, CHAT_LIMIT)) {
             return true;
         }
 

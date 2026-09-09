@@ -7,7 +7,9 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Base64;
 
 /**
@@ -45,11 +47,11 @@ public final class ChatEncryption {
     private static final byte[] SALT = "chatutils-chat-encryption-v1".getBytes(StandardCharsets.UTF_8);
 
     private static final int ITERATIONS = 200_000;
+    private static final int MAX_TOKEN_LENGTH = 4096;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    /** Deriving a key takes a moment, so the last passphrase's key is kept. */
-    private static String cachedPassphrase;
+    private static byte[] cachedFingerprint;
     private static SecretKey cachedKey;
 
     private ChatEncryption() {
@@ -78,7 +80,13 @@ public final class ChatEncryption {
 
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, key(passphrase), new GCMParameterSpec(TAG_BITS, nonce));
-            byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+            byte[] plain = plaintext.getBytes(StandardCharsets.UTF_8);
+            byte[] ciphertext;
+            try {
+                ciphertext = cipher.doFinal(plain);
+            } finally {
+                Arrays.fill(plain, (byte) 0);
+            }
 
             byte[] joined = new byte[nonce.length + ciphertext.length];
             System.arraycopy(nonce, 0, joined, 0, nonce.length);
@@ -100,6 +108,9 @@ public final class ChatEncryption {
         if (!looksEncrypted(token)) {
             return null;
         }
+        if (token.length() > MAX_TOKEN_LENGTH) {
+            return null;
+        }
 
         try {
             byte[] joined = Base64.getDecoder().decode(token.substring(MARKER.length()));
@@ -113,8 +124,11 @@ public final class ChatEncryption {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, key(passphrase), new GCMParameterSpec(TAG_BITS, nonce));
             byte[] plain = cipher.doFinal(joined, NONCE_BYTES, joined.length - NONCE_BYTES);
-
-            return new String(plain, StandardCharsets.UTF_8);
+            try {
+                return new String(plain, StandardCharsets.UTF_8);
+            } finally {
+                Arrays.fill(plain, (byte) 0);
+            }
         } catch (Exception notForUs) {
             // Wrong key, truncated by a chat limit, or never encrypted at all. All the same to us.
             return null;
@@ -134,20 +148,49 @@ public final class ChatEncryption {
         return Math.max(0, payload - NONCE_BYTES - TAG_BITS / 8);
     }
 
+    public static boolean fits(String plaintext, int chatLimit) {
+        if (plaintext == null || chatLimit < MARKER.length()) {
+            return false;
+        }
+        int payloadBytes = NONCE_BYTES + TAG_BITS / 8
+                + plaintext.getBytes(StandardCharsets.UTF_8).length;
+        int encodedLength = (payloadBytes * 4 + 2) / 3;
+        return MARKER.length() + encodedLength <= chatLimit;
+    }
+
     private static synchronized SecretKey key(String passphrase) {
         if (passphrase == null || passphrase.isBlank()) {
             throw new EncryptionException("no passphrase set");
         }
-        if (passphrase.equals(cachedPassphrase) && cachedKey != null) {
+        byte[] fingerprint = fingerprint(passphrase);
+        if (cachedKey != null && MessageDigest.isEqual(fingerprint, cachedFingerprint)) {
             return cachedKey;
         }
 
+        PBEKeySpec spec = null;
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            PBEKeySpec spec = new PBEKeySpec(passphrase.toCharArray(), SALT, ITERATIONS, 256);
+            spec = new PBEKeySpec(passphrase.toCharArray(), SALT, ITERATIONS, 256);
             cachedKey = new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
-            cachedPassphrase = passphrase;
+            if (cachedFingerprint != null) {
+                Arrays.fill(cachedFingerprint, (byte) 0);
+            }
+            cachedFingerprint = fingerprint;
             return cachedKey;
+        } catch (Exception failure) {
+            Arrays.fill(fingerprint, (byte) 0);
+            throw new EncryptionException(failure.getClass().getSimpleName());
+        } finally {
+            if (spec != null) {
+                spec.clearPassword();
+            }
+        }
+    }
+
+    private static byte[] fingerprint(String passphrase) {
+        try {
+            return MessageDigest.getInstance("SHA-256")
+                    .digest(passphrase.getBytes(StandardCharsets.UTF_8));
         } catch (Exception failure) {
             throw new EncryptionException(failure.getClass().getSimpleName());
         }
