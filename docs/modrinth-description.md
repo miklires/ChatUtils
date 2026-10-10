@@ -134,7 +134,7 @@ apply to messages produced by client-side features.
 
 ## Install
 
-* Minecraft **26.2**, **Fabric**
+* Minecraft **26.3**, **Fabric**
 * [Fabric API](https://modrinth.com/mod/fabric-api) — required
 * [YetAnotherConfigLib](https://modrinth.com/mod/yacl) — required
 * [Mod Menu](https://modrinth.com/mod/modmenu) — optional, adds the settings button to the mod list

@@ -2,9 +2,9 @@
 
 # Chat Utils
 
-Client-side chat tools for Minecraft 26.2.
+Client-side chat tools for Minecraft 26.3.
 
-![Minecraft](https://img.shields.io/badge/Minecraft-26.2-62B47A)
+![Minecraft](https://img.shields.io/badge/Minecraft-26.3-62B47A)
 ![Fabric](https://img.shields.io/badge/Loader-Fabric-DBD0B4)
 ![Java](https://img.shields.io/badge/Java-25-E76F00)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -34,7 +34,7 @@ language and falls back to English when a translation is unavailable.
 
 ## Install
 
-1. Install Minecraft 26.2 with Fabric Loader 0.19.3 or newer.
+1. Install Minecraft 26.3 with Fabric Loader 0.19.3 or newer.
 2. Add [Fabric API](https://modrinth.com/mod/fabric-api) to the `mods` directory.
 3. Add the Chat Utils JAR. YACL is bundled in the release JAR.
 4. Optionally install [Mod Menu](https://modrinth.com/mod/modmenu) for direct access to settings.

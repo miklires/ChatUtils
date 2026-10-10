@@ -15,7 +15,7 @@ jobs:
       CURSEFORGE_PROJECT_ID: ${{ secrets.CURSEFORGE_PROJECT_ID }}
       PROJECT_NAME: ChatUtils
       PRIMARY_BASENAME: chat-utils
-      GAME_VERSION_NAMES: 26.2,Client,Fabric,Java 25
+      GAME_VERSION_NAMES: 26.3,Client,Fabric,Java 25
       MINIMUM_SPACING_HOURS: 48
     steps:
       - uses: actions/checkout@v5
@@ -83,8 +83,8 @@ jobs:
           available = {entry["name"] for entry in json.loads(Path("curseforge-game-versions.json").read_text(encoding="utf-8"))}
           wanted = [name.strip() for name in os.environ["GAME_VERSION_NAMES"].split(",") if name.strip()]
           selected = [name for name in wanted if name in available]
-          if "26.2" not in selected:
-              raise SystemExit("CurseForge does not currently expose Minecraft 26.2")
+          if "26.3" not in selected:
+              raise SystemExit("CurseForge does not currently expose Minecraft 26.3")
           Path("selected-game-versions.json").write_text(json.dumps(selected), encoding="utf-8")
           print("CurseForge versions: " + ", ".join(selected))
           PY

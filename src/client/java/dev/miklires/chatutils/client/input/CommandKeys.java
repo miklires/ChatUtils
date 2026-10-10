@@ -42,11 +42,10 @@ public final class CommandKeys {
             return;
         }
 
-        var window = minecraft.getWindow();
         Set<Integer> pressedNow = new HashSet<>();
 
         for (Binding binding : bindings(ChatUtilsConfig.get())) {
-            if (!InputConstants.isKeyDown(window, binding.code())) {
+            if (!InputConstants.isKeyDown(binding.code())) {
                 continue;
             }
             pressedNow.add(binding.code());

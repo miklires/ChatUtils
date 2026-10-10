@@ -11,7 +11,6 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 public final class ChatUtilsKeys {
 
@@ -30,18 +29,18 @@ public final class ChatUtilsKeys {
                 Identifier.fromNamespaceAndPath(Chatutils.MOD_ID, "main"));
 
         peek = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.chatutils.peek", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, category));
+                "key.chatutils.peek", InputConstants.Type.KEYBOARD, InputConstants.KEY_Z, category));
         toggleHide = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.chatutils.toggle_hide", InputConstants.Type.KEYSYM,
+                "key.chatutils.toggle_hide", InputConstants.Type.KEYBOARD,
                 InputConstants.UNKNOWN.getValue(), category));
         openHistory = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.chatutils.history", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, category));
+                "key.chatutils.history", InputConstants.Type.KEYBOARD, InputConstants.KEY_H, category));
 
         translate = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.chatutils.translate", InputConstants.Type.KEYSYM,
+                "key.chatutils.translate", InputConstants.Type.KEYBOARD,
                 InputConstants.UNKNOWN.getValue(), category));
         repeatCommand = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.chatutils.repeat_command", InputConstants.Type.KEYSYM,
+                "key.chatutils.repeat_command", InputConstants.Type.KEYBOARD,
                 InputConstants.UNKNOWN.getValue(), category));
 
     }

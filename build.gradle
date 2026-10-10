@@ -36,10 +36,10 @@ configurations {
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    implementation "maven.modrinth:yacl:3.9.5+26.2-fabric"
-    include "maven.modrinth:yacl:3.9.5+26.2-fabric"
-    implementation "maven.modrinth:modmenu:20.0.1"
-    implementation "maven.modrinth:placeholder-api:3.1.0-beta.1+26.2"
+    implementation "maven.modrinth:yacl:3.9.7+26.3-fabric"
+    include "maven.modrinth:yacl:3.9.7+26.3-fabric"
+    implementation "maven.modrinth:modmenu:21.0.0"
+    implementation "maven.modrinth:placeholder-api:3.2.0+26.3"
 
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
@@ -107,7 +107,7 @@ publishing {
     }
 }
 
-def releaseNotes = """Adds automated releases for Modrinth and CurseForge with accurate Minecraft 26.2, Fabric, Java 25, client-environment, and dependency metadata."""
+def releaseNotes = """Adds Minecraft 26.3 compatibility, migrates key handling from GLFW to Minecraft's SDL-backed input API, and updates Fabric, YACL, Mod Menu, and Text Placeholder API dependencies."""
 
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")

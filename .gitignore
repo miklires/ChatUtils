@@ -21,6 +21,7 @@ bin/
 .DS_Store
 
 # fabric
+.fabric/
 run/
 remappedSrc/
 fabricloader.log
