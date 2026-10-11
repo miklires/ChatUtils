@@ -29,7 +29,7 @@ jobs:
           latest_project=""
           latest_time=""
 
-          for repo in BadRecipeBook ChatUtils ClearFiles Folders; do
+          for repo in mAuction mAuth mBadges mBans mCases mChat mClans mCodes mColor mCommand mCraft mEvents mMotd mProfile mProtect mReports mReputation BadRecipeBook ChatUtils ClearFiles Folders; do
             published_at="$(gh api --method GET \
               "repos/miklires/$repo/actions/workflows/publish-curseforge.yml/runs" \
               -f status=success -f per_page=1 \
